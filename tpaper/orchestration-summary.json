@@ -1,0 +1,204 @@
+{
+  "project": {
+    "name": "TPaper",
+    "path": "e:\\B_GAME\\ex\\TPPPPaper\\tpaper",
+    "operation": "create",
+    "deviceType": "desktop",
+    "language": "zh-CN",
+    "dashboardMode": false,
+    "styleDefinitionBrief": "Youthful SaaS tool for exam conversion — bright white base with indigo-to-cyan gradient accents, Inter + Noto Sans SC typography, playful yet refined card surfaces, energetic micro-interactions",
+    "designRead": "B2C SaaS tool / students and educators / youthful vibrant refined / medium density / avoid corporate grey monotony",
+    "designDials": {
+      "layoutVariance": 3,
+      "motionIntensity": 3,
+      "visualDensity": 3
+    },
+    "sharedProjectShellContract": {
+      "navigationShell": "top navbar with logo left, nav links center, action buttons right; active link gets gradient underline",
+      "primaryColorSystem": "indigo #6366f1 primary with gradient to cyan/teal for hero and accents",
+      "typographySystem": "Inter + Noto Sans SC, 400/500/600/700 weights, 1.6 body line-height",
+      "radiusScale": "6/10/16/24/9999px — rounded but not puffy",
+      "surfaceDepthModel": "border-first surfaces, shadows only on hover/elevation, max alpha 0.05 for static",
+      "ctaStyle": "gradient-filled primary CTA with white text, subtle hover lift; secondary CTA outlined",
+      "alignmentRules": "centered hero, left-aligned content, consistent 16/24px padding"
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-project-shell",
+        "kind": "project-shell",
+        "pageIds": ["page-home", "page-convert", "page-result", "page-settings", "page-history"],
+        "output": "partials/project-shell.html",
+        "sharedRegions": ["top-navbar", "global-footer"],
+        "privateRegions": [],
+        "mutableSlots": ["activeNavItem", "pageTitle"],
+        "status": "planned",
+        "children": [
+          {
+            "nodeId": "gen-page-home",
+            "kind": "page-leaf",
+            "pageIds": ["page-home"],
+            "output": "pages/home.html",
+            "sharedRegions": [],
+            "privateRegions": ["hero-section", "features-grid", "how-it-works"],
+            "mutableSlots": ["activeNavItem"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-convert",
+            "kind": "page-leaf",
+            "pageIds": ["page-convert"],
+            "output": "pages/convert.html",
+            "sharedRegions": [],
+            "privateRegions": ["upload-dropzone", "config-panel", "convert-progress"],
+            "mutableSlots": ["activeNavItem"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-result",
+            "kind": "page-leaf",
+            "pageIds": ["page-result"],
+            "output": "pages/result.html",
+            "sharedRegions": [],
+            "privateRegions": ["result-header", "result-preview", "result-actions"],
+            "mutableSlots": ["activeNavItem"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-settings",
+            "kind": "page-leaf",
+            "pageIds": ["page-settings"],
+            "output": "pages/settings.html",
+            "sharedRegions": [],
+            "privateRegions": ["settings-form", "model-config"],
+            "mutableSlots": ["activeNavItem"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-history",
+            "kind": "page-leaf",
+            "pageIds": ["page-history"],
+            "output": "pages/history.html",
+            "sharedRegions": [],
+            "privateRegions": ["history-list", "history-filters"],
+            "mutableSlots": ["activeNavItem"],
+            "status": "planned",
+            "children": []
+          }
+        ]
+      }
+    }
+  },
+  "designSource": {
+    "operatingMode": "free-explore",
+    "libraryIdentity": null
+  },
+  "pages": [
+    {
+      "pageId": "page-home",
+      "title": "首页",
+      "htmlSrc": "pages/home.html",
+      "pageType": "showcase",
+      "visualNorthStar": "Vibrant gradient hero with floating decorative shapes, clean feature cards below, asymmetric layout",
+      "compositionPattern": "hero-centered → feature-grid-3col → how-it-works-steps → footer",
+      "continuityAnchors": {
+        "sharedShell": "top-navbar + footer identical across all pages",
+        "brandTreatment": "gradient accent on logo, primary CTA uses gradient fill",
+        "surfaceLanguage": "white cards on light grey bg, border-only at rest, subtle shadow on hover"
+      },
+      "soulElement": "Hero section uses animated gradient mesh background with floating geometric shapes (circles, triangles) — gives a youthful, energetic first impression",
+      "imagePlan": [],
+      "chartsRequired": false
+    },
+    {
+      "pageId": "page-convert",
+      "title": "上传转换",
+      "htmlSrc": "pages/convert.html",
+      "pageType": "task-driven",
+      "visualNorthStar": "Clean split layout: large dropzone on left, config panel on right, with progress state",
+      "compositionPattern": "page-header → upload-dropzone + config-sidebar → convert-button → progress-indicator",
+      "continuityAnchors": {
+        "sharedShell": "top-navbar + footer identical across all pages",
+        "brandTreatment": "gradient accent on logo, primary CTA uses gradient fill",
+        "surfaceLanguage": "white cards on light grey bg, border-only at rest, subtle shadow on hover"
+      },
+      "soulElement": "Upload dropzone has a playful dashed border animation on hover, with a subtle pulse effect on the upload icon",
+      "imagePlan": [],
+      "chartsRequired": false
+    },
+    {
+      "pageId": "page-result",
+      "title": "转换结果预览",
+      "htmlSrc": "pages/result.html",
+      "pageType": "information-dense",
+      "visualNorthStar": "Result header with success badge, embedded interactive preview iframe, action bar",
+      "compositionPattern": "result-header-bar → embedded-preview-area → action-bar (copy-link / regenerate / download-html)",
+      "continuityAnchors": {
+        "sharedShell": "top-navbar + footer identical across all pages",
+        "brandTreatment": "gradient accent on logo, primary CTA uses gradient fill",
+        "surfaceLanguage": "white cards on light grey bg, border-only at rest, subtle shadow on hover"
+      },
+      "soulElement": "Success checkmark animates in with a confetti burst effect, preview area has a subtle gradient border glow",
+      "imagePlan": [],
+      "chartsRequired": false
+    },
+    {
+      "pageId": "page-settings",
+      "title": "API 设置",
+      "htmlSrc": "pages/settings.html",
+      "pageType": "task-driven",
+      "visualNorthStar": "Clean form layout with grouped sections, inline validation, test-connection button",
+      "compositionPattern": "page-header → api-key-section → base-url-section → model-selection → test-connection-btn → save-btn",
+      "continuityAnchors": {
+        "sharedShell": "top-navbar + footer identical across all pages",
+        "brandTreatment": "gradient accent on logo, primary CTA uses gradient fill",
+        "surfaceLanguage": "white cards on light grey bg, border-only at rest, subtle shadow on hover"
+      },
+      "soulElement": "API key input field has a show/hide toggle with a smooth eye icon animation; test-connection shows a live status indicator with colored pulse",
+      "imagePlan": [],
+      "chartsRequired": false
+    },
+    {
+      "pageId": "page-history",
+      "title": "转换历史",
+      "htmlSrc": "pages/history.html",
+      "pageType": "information-dense",
+      "visualNorthStar": "Clean table/card list with status badges, date filters, batch actions",
+      "compositionPattern": "page-header → filter-bar → history-list (card or table rows) → pagination",
+      "continuityAnchors": {
+        "sharedShell": "top-navbar + footer identical across all pages",
+        "brandTreatment": "gradient accent on logo, primary CTA uses gradient fill",
+        "surfaceLanguage": "white cards on light grey bg, border-only at rest, subtle shadow on hover"
+      },
+      "soulElement": "Each history item has a color-coded status pill (converting/done/error) and a relative time indicator; empty state shows a friendly illustration-style message",
+      "imagePlan": [],
+      "chartsRequired": false
+    }
+  ],
+  "assets": [],
+  "wiringPlan": [
+    { "fromPageId": "page-home", "domId": "nav-convert", "toPageId": "page-convert" },
+    { "fromPageId": "page-home", "domId": "hero-cta", "toPageId": "page-convert" },
+    { "fromPageId": "page-home", "domId": "nav-history", "toPageId": "page-history" },
+    { "fromPageId": "page-home", "domId": "nav-settings", "toPageId": "page-settings" },
+    { "fromPageId": "page-convert", "domId": "nav-home", "toPageId": "page-home", "hideEdge": true },
+    { "fromPageId": "page-convert", "domId": "nav-history", "toPageId": "page-history" },
+    { "fromPageId": "page-convert", "domId": "nav-settings", "toPageId": "page-settings" },
+    { "fromPageId": "page-convert", "domId": "btn-convert", "toPageId": "page-result" },
+    { "fromPageId": "page-result", "domId": "nav-home", "toPageId": "page-home", "hideEdge": true },
+    { "fromPageId": "page-result", "domId": "btn-reconvert", "toPageId": "page-convert" },
+    { "fromPageId": "page-result", "domId": "nav-history", "toPageId": "page-history" },
+    { "fromPageId": "page-result", "domId": "nav-settings", "toPageId": "page-settings" },
+    { "fromPageId": "page-settings", "domId": "nav-home", "toPageId": "page-home", "hideEdge": true },
+    { "fromPageId": "page-settings", "domId": "nav-convert", "toPageId": "page-convert", "hideEdge": true },
+    { "fromPageId": "page-settings", "domId": "nav-history", "toPageId": "page-history" },
+    { "fromPageId": "page-history", "domId": "nav-home", "toPageId": "page-home", "hideEdge": true },
+    { "fromPageId": "page-history", "domId": "nav-convert", "toPageId": "page-convert", "hideEdge": true },
+    { "fromPageId": "page-history", "domId": "nav-settings", "toPageId": "page-settings" },
+    { "fromPageId": "page-history", "domId": "history-item-1", "toPageId": "page-result", "hideEdge": true }
+  ],
+  "hiddenInteractionPlan": []
+}

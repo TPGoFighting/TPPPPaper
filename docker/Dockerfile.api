@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 系统依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装依赖
+COPY backend/pyproject.toml ./backend/
+RUN pip install --no-cache-dir -e backend/
+
+# 复制应用代码
+COPY backend/app ./backend/app
+COPY backend/alembic ./backend/alembic
+COPY backend/alembic.ini ./backend/
+
+WORKDIR /app/backend
+
+EXPOSE 8000
+
+# 启动脚本：等待数据库 → 迁移 → 启动
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

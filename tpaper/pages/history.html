@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TPaper - 转换历史</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ===== Navbar ===== -->
+  <header class="tp-nav">
+    <nav class="tp-nav-inner">
+      <a href="home.html" class="tp-logo">
+        <img src="../assets/8e5cb3317fe6f13643aaed5b79adc0f5.jpg" alt="TPaper" style="height:28px;">
+      </a>
+      <div class="tp-nav-links">
+        <a href="home.html" data-dom-id="nav-home" class="tp-nav-link">首页</a>
+        <a href="convert.html" data-dom-id="nav-convert" class="tp-nav-link">转换</a>
+        <a href="history.html" data-dom-id="nav-history" class="tp-nav-link tp-nav-link--active">历史</a>
+        <a href="settings.html" data-dom-id="nav-settings" class="tp-nav-link">设置</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ===== Main ===== -->
+  <main class="tp-main">
+
+    <!-- Page Header -->
+    <div class="tp-page-header">
+      <div class="tp-page-header-row">
+        <h1 class="tp-page-title">转换历史</h1>
+        <span class="tp-stat-pill">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="tp-stat-icon">
+            <rect x="1" y="9" width="2" height="6" rx="1" fill="currentColor"/>
+            <rect x="5" y="6" width="2" height="9" rx="1" fill="currentColor"/>
+            <rect x="9" y="3" width="2" height="12" rx="1" fill="currentColor"/>
+            <rect x="13" y="1" width="2" height="14" rx="1" fill="currentColor"/>
+          </svg>
+          共 12 次转换
+        </span>
+      </div>
+    </div>
+
+    <!-- Filters + Search -->
+    <div class="tp-filters-row">
+      <div class="tp-filter-chips">
+        <button class="tp-filter-chip tp-filter-chip--active">全部</button>
+        <button class="tp-filter-chip">已完成</button>
+        <button class="tp-filter-chip">转换中</button>
+        <button class="tp-filter-chip">失败</button>
+      </div>
+      <div class="tp-search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tp-search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="tp-search-input" placeholder="搜索文件名...">
+      </div>
+    </div>
+
+    <!-- ===== History Items ===== -->
+    <div class="tp-history-list">
+
+      <!-- Item 1: Completed (clickable) -->
+      <a href="result.html" class="tp-history-item anim-fade-in" data-dom-id="history-item-1" style="animation-delay: 0ms;">
+        <div class="tp-item-left">
+          <div class="tp-file-icon tp-file-icon--pdf">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" fill="currentColor"/><text x="12" y="18" text-anchor="middle" font-size="5" font-weight="600" fill="currentColor" font-family="system-ui, sans-serif">PDF</text></svg>
+          </div>
+          <div class="tp-item-info">
+            <span class="tp-item-name">南邮数据库试卷</span>
+            <span class="tp-item-file">exam-2025-a.pdf</span>
+          </div>
+        </div>
+        <div class="tp-item-right">
+          <span class="tp-item-status tp-item-status--success">已完成</span>
+          <span class="tp-item-meta">25 题 &middot; 3分钟前</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tp-item-arrow"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
+
+      <!-- Item 2: Completed -->
+      <a href="result.html" class="tp-history-item anim-fade-in" style="animation-delay: 60ms;">
+        <div class="tp-item-left">
+          <div class="tp-file-icon tp-file-icon--docx">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" fill="currentColor"/><text x="12" y="18" text-anchor="middle" font-size="4.5" font-weight="600" fill="currentColor" font-family="system-ui, sans-serif">DOCX</text></svg>
+          </div>
+          <div class="tp-item-info">
+            <span class="tp-item-name">高等数学</span>
+            <span class="tp-item-file">math-practice.docx</span>
+          </div>
+        </div>
+        <div class="tp-item-right">
+          <span class="tp-item-status tp-item-status--success">已完成</span>
+          <span class="tp-item-meta">18 题 &middot; 2小时前</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tp-item-arrow"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
+
+      <!-- Item 3: In Progress (pulsing) -->
+      <a href="#" class="tp-history-item tp-history-item--active anim-fade-in" style="animation-delay: 120ms;">
+        <div class="tp-item-left">
+          <div class="tp-file-icon tp-file-icon--pdf">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" fill="currentColor"/><text x="12" y="18" text-anchor="middle" font-size="5" font-weight="600" fill="currentColor" font-family="system-ui, sans-serif">PDF</text></svg>
+          </div>
+          <div class="tp-item-info">
+            <span class="tp-item-name">操作系统</span>
+            <span class="tp-item-file">os-review.pdf</span>
+          </div>
+        </div>
+        <div class="tp-item-right">
+          <span class="tp-item-status tp-item-status--progress">
+            <span class="tp-pulse-dot"></span>
+            转换中
+          </span>
+          <span class="tp-item-meta">-- 题 &middot; 刚刚</span>
+        </div>
+        <div class="tp-progress-bar-wrap">
+          <div class="tp-progress-bar">
+            <div class="tp-progress-bar-fill tp-progress-bar-fill--anim"></div>
+          </div>
+        </div>
+      </a>
+
+      <!-- Item 4: Failed -->
+      <a href="#" class="tp-history-item anim-fade-in" style="animation-delay: 180ms;">
+        <div class="tp-item-left">
+          <div class="tp-file-icon tp-file-icon--image">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="tp-item-info">
+            <span class="tp-item-name">英语四级</span>
+            <span class="tp-item-file">cet4-2024.jpg</span>
+          </div>
+        </div>
+        <div class="tp-item-right">
+          <span class="tp-item-status tp-item-status--error">失败</span>
+          <span class="tp-item-meta">格式不支持 &middot; 昨天</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tp-item-arrow"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
+
+      <!-- Item 5: Completed -->
+      <a href="result.html" class="tp-history-item anim-fade-in" style="animation-delay: 240ms;">
+        <div class="tp-item-left">
+          <div class="tp-file-icon tp-file-icon--pdf">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" fill="currentColor"/><text x="12" y="18" text-anchor="middle" font-size="5" font-weight="600" fill="currentColor" font-family="system-ui, sans-serif">PDF</text></svg>
+          </div>
+          <div class="tp-item-info">
+            <span class="tp-item-name">线性代数</span>
+            <span class="tp-item-file">linear-algebra.pdf</span>
+          </div>
+        </div>
+        <div class="tp-item-right">
+          <span class="tp-item-status tp-item-status--success">已完成</span>
+          <span class="tp-item-meta">30 题 &middot; 3天前</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tp-item-arrow"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- ===== Pagination ===== -->
+    <div class="tp-pagination anim-fade-in" style="animation-delay: 300ms;">
+      <button class="tp-page-btn tp-page-btn--disabled" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        上一页
+      </button>
+      <button class="tp-page-btn tp-page-btn--active">1</button>
+      <button class="tp-page-btn">2</button>
+      <button class="tp-page-btn">3</button>
+      <button class="tp-page-btn">
+        下一页
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="tp-footer">
+    <p>TPaper &middot; AI 试卷转换工具</p>
+  </footer>
+
+  <!-- ===== Filter Chip JS ===== -->
+  <script>
+    (function() {
+      var chips = document.querySelectorAll('.tp-filter-chip');
+      chips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+          chips.forEach(function(c) { c.classList.remove('tp-filter-chip--active'); });
+          chip.classList.add('tp-filter-chip--active');
+        });
+      });
+    })();
+  </script>
+
+  <!-- ===== Styles ===== -->
+  <style>
+    /* Reset & Base */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Geist', 'Noto Sans SC', var(--font-family-base);
+      font-size: var(--font-size-base);
+      background: var(--color-bg-page);
+      color: var(--color-text-primary);
+      line-height: var(--line-height-normal);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100dvh;
+    }
+
+    /* Animations */
+    @media (prefers-reduced-motion: no-preference) {
+      .anim-fade-in {
+        opacity: 0;
+        transform: translateY(12px);
+        animation: fadeInUp 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
+      }
+      @keyframes fadeInUp {
+        to { opacity: 1; transform: translateY(0); }
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .anim-fade-in { opacity: 1; transform: none; }
+    }
+
+    /* Nav */
+    .tp-nav { position: sticky; top: 0; z-index: 50; background: var(--color-bg-surface); border-bottom: 1px solid var(--color-border-light); }
+    .tp-nav-inner { max-width: var(--max-width); margin: 0 auto; padding: 0 var(--space-6); height: var(--nav-height); display: flex; align-items: center; justify-content: space-between; }
+    .tp-logo { text-decoration: none; font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 1px; }
+    .tp-logo-letter { transition: opacity var(--transition-fast); }
+    .tp-logo:hover .tp-logo-letter { opacity: 0.85; }
+    .tp-nav-links { display: flex; gap: var(--space-8); align-items: center; }
+    .tp-nav-link { position: relative; font-size: var(--font-size-sm); font-weight: 500; color: var(--color-text-secondary); text-decoration: none; padding: var(--space-3) 0; transition: color var(--transition-fast); }
+    .tp-nav-link:hover { color: var(--color-text-primary); }
+    .tp-nav-link--active { color: var(--color-text-primary); font-weight: 600; }
+    .tp-nav-link--active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; border-radius: var(--radius-full); background: var(--color-primary); }
+
+    /* Main */
+    .tp-main { max-width: 720px; margin: 0 auto; padding: var(--space-10) var(--space-5) var(--space-12); }
+
+    /* Page Header */
+    .tp-page-header { margin-bottom: var(--space-6); }
+    .tp-page-header-row { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+    .tp-page-title { font-size: var(--text-2xl); font-weight: 700; margin: 0; line-height: var(--leading-tight); color: var(--color-text-primary); }
+    .tp-stat-pill {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-xs); font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border-light);
+    }
+    .tp-stat-icon { opacity: 0.6; }
+
+    /* Filters + Search */
+    .tp-filters-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap; }
+    .tp-filter-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+    .tp-filter-chip {
+      display: inline-flex; align-items: center; height: 32px; padding: 0 var(--space-4);
+      font-size: var(--font-size-xs); font-weight: var(--font-medium);
+      font-family: 'Geist', 'Noto Sans SC', var(--font-family-base);
+      color: var(--color-text-secondary); background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border); border-radius: var(--radius-full);
+      cursor: pointer; white-space: nowrap;
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+    .tp-filter-chip:hover { background: var(--color-bg-hover); border-color: var(--color-border-hover); }
+    .tp-filter-chip--active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .tp-filter-chip--active:hover { background: var(--color-primary-dark); border-color: var(--color-primary-dark); }
+
+    .tp-search-wrap {
+      position: relative; display: flex; align-items: center;
+    }
+    .tp-search-icon {
+      position: absolute; left: var(--space-3); pointer-events: none; color: var(--color-text-tertiary);
+    }
+    .tp-search-input {
+      width: 220px; height: 36px; padding: 0 var(--space-3) 0 36px;
+      font-size: var(--font-size-xs); font-family: 'Geist', 'Noto Sans SC', var(--font-family-base);
+      color: var(--color-text-primary); background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border); border-radius: var(--radius-full);
+      outline: none; box-sizing: border-box;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), width var(--transition-fast);
+    }
+    .tp-search-input::placeholder { color: var(--color-text-tertiary); }
+    .tp-search-input:focus { border-color: var(--color-border-focus); box-shadow: 0 0 0 3px var(--color-primary-lighter); width: 260px; }
+
+    /* History List */
+    .tp-history-list { display: flex; flex-direction: column; gap: var(--space-3); }
+
+    /* History Item */
+    .tp-history-item {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+      background: var(--color-bg-surface); border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-md); padding: var(--space-4) var(--space-5);
+      text-decoration: none; color: inherit; cursor: pointer;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+      position: relative; overflow: hidden;
+    }
+    .tp-history-item:hover { border-color: var(--color-border-hover); box-shadow: var(--shadow-sm); background: var(--color-bg-hover); }
+    .tp-history-item--active { border-color: var(--color-primary-200); }
+    .tp-history-item--active:hover { border-color: var(--color-primary-300); }
+
+    .tp-item-left { display: flex; align-items: center; gap: var(--space-4); flex: 1; min-width: 0; }
+    .tp-item-right { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; }
+    .tp-item-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .tp-item-name { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tp-item-file { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+    .tp-item-meta { font-size: var(--font-size-xs); color: var(--color-text-tertiary); white-space: nowrap; }
+    .tp-item-arrow { color: var(--color-text-tertiary); flex-shrink: 0; transition: transform var(--transition-fast); }
+    .tp-history-item:hover .tp-item-arrow { transform: translateX(2px); color: var(--color-text-secondary); }
+
+    /* File icons */
+    .tp-file-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .tp-file-icon--pdf { background: #fde8e8; color: #d93025; }
+    .tp-file-icon--docx { background: #e8f0fe; color: #1a73e8; }
+    .tp-file-icon--image { background: #fef7e0; color: #e8a800; }
+
+    /* Status badges */
+    .tp-item-status {
+      display: inline-flex; align-items: center; gap: var(--space-1);
+      font-size: var(--font-size-xs); font-weight: var(--font-semibold);
+      padding: 2px var(--space-3); border-radius: var(--radius-full);
+      white-space: nowrap;
+    }
+    .tp-item-status--success { color: #137333; background: #e6f4ea; }
+    .tp-item-status--progress { color: var(--color-primary); background: var(--color-primary-50); }
+    .tp-item-status--error { color: #c5221f; background: #fce8e6; }
+
+    /* Pulse dot */
+    .tp-pulse-dot {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: var(--radius-full); background: var(--color-primary);
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tp-pulse-dot { animation: none; }
+    }
+
+    /* Inline progress bar for active item */
+    .tp-progress-bar-wrap {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--color-bg-secondary);
+    }
+    .tp-progress-bar { width: 100%; height: 100%; overflow: hidden; }
+    .tp-progress-bar-fill { height: 100%; width: 62%; background: var(--color-primary); border-radius: var(--radius-full); }
+    .tp-progress-bar-fill--anim {
+      animation: progress-indeterminate 2s ease-in-out infinite;
+    }
+    @keyframes progress-indeterminate {
+      0% { width: 30%; }
+      50% { width: 70%; }
+      100% { width: 30%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tp-progress-bar-fill--anim { animation: none; width: 50%; }
+    }
+
+    /* Pagination */
+    .tp-pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin-top: var(--space-8); }
+    .tp-page-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1);
+      height: 36px; min-width: 36px; padding: 0 var(--space-3);
+      font-size: var(--font-size-xs); font-weight: var(--font-medium);
+      font-family: 'Geist', 'Noto Sans SC', var(--font-family-base);
+      color: var(--color-text-secondary); background: var(--color-bg-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius-full);
+      cursor: pointer; white-space: nowrap;
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+    .tp-page-btn:hover { background: var(--color-bg-hover); border-color: var(--color-border-hover); }
+    .tp-page-btn--active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); font-weight: 600; }
+    .tp-page-btn--active:hover { background: var(--color-primary-dark); border-color: var(--color-primary-dark); }
+    .tp-page-btn--disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+    /* Footer */
+    .tp-footer { text-align: center; padding: var(--space-8) var(--space-5); border-top: 1px solid var(--color-border-light); }
+    .tp-footer p { font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin: 0; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .tp-main { padding: var(--space-6) var(--space-4) var(--space-8); }
+      .tp-filters-row { flex-direction: column; align-items: stretch; }
+      .tp-search-wrap { width: 100%; }
+      .tp-search-input { width: 100%; }
+      .tp-search-input:focus { width: 100%; }
+      .tp-item-meta { display: none; }
+      .tp-history-item { padding: var(--space-3) var(--space-4); }
+      .tp-nav-inner { padding: 0 var(--space-4); }
+      .tp-nav-links { gap: var(--space-5); }
+    }
+  </style>
+</body>
+</html>

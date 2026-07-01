@@ -1,0 +1,360 @@
+{
+  "data": [
+    {
+      "id": "page-home",
+      "title": "首页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home.html",
+        "interactions": [
+          {
+            "domId": "nav-convert",
+            "targetPageId": "page-convert"
+          },
+          {
+            "domId": "hero-cta",
+            "targetPageId": "page-convert"
+          },
+          {
+            "domId": "nav-history",
+            "targetPageId": "page-history"
+          },
+          {
+            "domId": "nav-settings",
+            "targetPageId": "page-settings"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-convert",
+      "title": "上传转换",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/convert.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-history",
+            "targetPageId": "page-history"
+          },
+          {
+            "domId": "nav-settings",
+            "targetPageId": "page-settings"
+          },
+          {
+            "domId": "btn-convert",
+            "targetPageId": "page-result"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-result",
+      "title": "转换结果预览",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 0,
+        "y": 870,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/result.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          },
+          {
+            "domId": "btn-reconvert",
+            "targetPageId": "page-convert"
+          },
+          {
+            "domId": "nav-history",
+            "targetPageId": "page-history"
+          },
+          {
+            "domId": "nav-settings",
+            "targetPageId": "page-settings"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-settings",
+      "title": "API 设置",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 620,
+        "y": 843,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/settings.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-convert",
+            "targetPageId": "page-convert",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-history",
+            "targetPageId": "page-history"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-history",
+      "title": "转换历史",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 620,
+        "y": 466,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/history.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-convert",
+            "targetPageId": "page-convert",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-settings",
+            "targetPageId": "page-settings"
+          },
+          {
+            "domId": "history-item-1",
+            "targetPageId": "page-result",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "img-hero-visual",
+      "title": "Hero 视觉",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 0,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/hero-visual.jpg"
+      }
+    },
+    {
+      "id": "img-feature-parse",
+      "title": "智能解析插图",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 620,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/feature-parse.jpg"
+      }
+    },
+    {
+      "id": "img-feature-interactive",
+      "title": "可交互展示插图",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 1240,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/feature-interactive.jpg"
+      }
+    },
+    {
+      "id": "img-feature-config",
+      "title": "自定义配置插图",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1751249280000,
+      "canvasData": {
+        "x": 1860,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/feature-config.jpg"
+      }
+    },
+    {
+      "id": "image-1",
+      "title": "__svg",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893414730,
+      "canvasData": {
+        "x": 2480,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/__svg.svg"
+      }
+    },
+    {
+      "id": "image-2",
+      "title": "__svg",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893424750,
+      "canvasData": {
+        "x": 3100,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/__svg-1.svg"
+      }
+    },
+    {
+      "id": "image-3",
+      "title": "__svg",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893436547,
+      "canvasData": {
+        "x": 3720,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/__svg-2.svg"
+      }
+    },
+    {
+      "id": "image-4",
+      "title": "__svg",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893451985,
+      "canvasData": {
+        "x": 4340,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/__svg-3.svg"
+      }
+    },
+    {
+      "id": "image-5",
+      "title": "8e5cb3317fe6f13643aaed5b79adc0f5",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893469059,
+      "canvasData": {
+        "x": 4960,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/8e5cb3317fe6f13643aaed5b79adc0f5.jpg"
+      }
+    },
+    {
+      "id": "image-6",
+      "title": "__svg",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893484359,
+      "canvasData": {
+        "x": 5580,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/__svg-4.svg"
+      }
+    },
+    {
+      "id": "image-7",
+      "title": "__svg",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893491080,
+      "canvasData": {
+        "x": 6200,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/__svg-5.svg"
+      }
+    },
+    {
+      "id": "image-8",
+      "title": "__svg",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893499971,
+      "canvasData": {
+        "x": 6820,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/__svg-6.svg"
+      }
+    },
+    {
+      "id": "image-9",
+      "title": "__svg",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1782893506375,
+      "canvasData": {
+        "x": 7440,
+        "y": 1520
+      },
+      "devMetadata": {
+        "imageSrc": "assets/__svg-7.svg"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "TPaper",
+    "showEdge": false
+  }
+}

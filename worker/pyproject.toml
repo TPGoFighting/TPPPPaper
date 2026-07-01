@@ -1,0 +1,23 @@
+[project]
+name = "tpaper-worker"
+version = "1.0.0"
+description = "TPaper Worker - 异步文档处理与模型调用"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlalchemy>=2.0.36",
+    "psycopg[binary]>=3.2.3",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "redis>=5.2.0",
+    "httpx>=0.28.0",
+    "bleach>=6.2.0",
+    "tinycss2>=1.4.0",
+    "beautifulsoup4>=4.12.3",
+    "lxml>=5.3.0",
+    "cryptography>=43.0.0",
+    "passlib[bcrypt]>=1.7.4",
+    "itsdangerous>=2.2.0",
+    "pypdf>=5.1.0",
+    "python-docx>=1.1.2",
+    "Pillow>=11.0.0",
+]

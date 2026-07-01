@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TPaper - 转换结果</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="min-h-[100dvh] bg-[var(--color-bg-page)] text-[var(--color-text-primary)] font-sans antialiased">
+
+  <!-- ===== Nav Bar ===== -->
+  <header class="sticky top-0 z-50 backdrop-blur-[var(--nav-blur)] bg-[var(--color-bg)]/90 border-b border-[var(--color-border)]">
+    <nav class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-[var(--nav-height)]">
+      <a href="home.html" class="flex items-center gap-1 no-underline text-2xl font-bold tracking-tight select-none">
+        <img src="../assets/8e5cb3317fe6f13643aaed5b79adc0f5.jpg" alt="TPaper" style="height:28px;">
+      </a>
+      <div class="flex items-center gap-1">
+        <a href="home.html" data-dom-id="nav-home" class="nav-link text-sm font-medium text-[var(--color-text-secondary)] px-3 py-2 rounded-[var(--radius-sm)] no-underline hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">首页</a>
+        <a href="convert.html" data-dom-id="nav-convert" class="nav-link text-sm font-medium text-[var(--color-text-secondary)] px-3 py-2 rounded-[var(--radius-sm)] no-underline hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">转换</a>
+        <a href="history.html" data-dom-id="nav-history" class="nav-link text-sm font-medium text-[var(--color-text-secondary)] px-3 py-2 rounded-[var(--radius-sm)] no-underline hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">历史</a>
+        <a href="settings.html" data-dom-id="nav-settings" class="nav-link text-sm font-medium text-[var(--color-text-secondary)] px-3 py-2 rounded-[var(--radius-sm)] no-underline hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">设置</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ===== Main Content ===== -->
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
+
+    <!-- ===== Result Header ===== -->
+    <section class="result-header anim-fade-in" style="animation-delay: 0ms;">
+      <div class="flex items-start gap-4 flex-wrap md:flex-nowrap">
+        <!-- Green checkmark circle -->
+        <div class="success-icon shrink-0">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="22" fill="var(--color-success-bg)"/>
+            <circle cx="24" cy="24" r="22" stroke="var(--color-success)" stroke-width="2" fill="none"/>
+            <path d="M15 24 L21 30 L33 18" stroke="var(--color-success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" class="checkmark-path"/>
+          </svg>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <h1 class="text-[var(--text-2xl)] font-bold text-[var(--color-text-primary)] leading-[var(--leading-tight)] m-0">转换完成!</h1>
+          <p class="mt-1 text-[var(--text-base)] text-[var(--color-text-tertiary)]">南邮《数据库系统基础》期末试卷 A卷</p>
+
+          <!-- 3 stat pills -->
+          <div class="flex flex-wrap items-center gap-2 mt-3">
+            <span class="stat-pill">25 道题目</span>
+            <span class="stat-pill">用时 12s</span>
+            <span class="stat-pill">3 种题型</span>
+          </div>
+        </div>
+
+        <!-- Reconvert outlined button -->
+        <a href="convert.html" data-dom-id="btn-reconvert" class="btn-outlined shrink-0 hidden md:inline-flex">
+          <img src="../assets/__svg-4.svg" width="16" height="16" alt="">
+          重新转换
+        </a>
+      </div>
+    </section>
+
+    <!-- ===== Preview Area ===== -->
+    <section class="anim-fade-in mt-8" style="animation-delay: 80ms;">
+      <div class="preview-card">
+        <!-- Fake browser bar -->
+        <div class="browser-bar">
+          <div class="browser-dots">
+            <span class="dot" style="background: #ff5f57;"></span>
+            <span class="dot" style="background: #ffbd2e;"></span>
+            <span class="dot" style="background: #28ca42;"></span>
+          </div>
+          <div class="browser-url">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" class="shrink-0 opacity-50">
+              <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2" fill="none"/>
+              <path d="M7 3v4l2.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+            <span>tpaper.app/exam/abc123</span>
+          </div>
+          <div style="width: 52px;"></div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="preview-progress">
+          <div class="flex items-center justify-between mb-1">
+            <span class="progress-label">完成 3/25</span>
+            <span class="progress-label text-[var(--color-primary)]">12%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+
+        <!-- Preview content area -->
+        <div class="preview-content">
+          <!-- Mini exam header -->
+          <div class="text-center mb-4">
+            <p class="text-[13px] font-semibold text-[var(--color-text-primary)] m-0">南邮《数据库系统基础》期末试卷 A卷</p>
+            <p class="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">共 25 题 / 满分 100 分 / 答题时间 120 分钟</p>
+          </div>
+
+          <!-- Question 1: Single choice (selected B) -->
+          <div class="question-card">
+            <div class="question-meta">
+              <span class="question-num">1</span>
+              <span class="question-tag">单选题</span>
+              <span class="question-score">5 分</span>
+            </div>
+            <p class="question-text">在关系数据库中，用来唯一标识表中每一行记录的字段或字段组合称为:</p>
+            <div class="options-list">
+              <div class="option-row">
+                <div class="option-dot"></div>
+                <span>A. 外键</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot filled"></div>
+                <span class="font-medium">B. 主键</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot"></div>
+                <span>C. 索引</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot"></div>
+                <span>D. 视图</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 2: Multi-choice (selected A, C) -->
+          <div class="question-card">
+            <div class="question-meta">
+              <span class="question-num">2</span>
+              <span class="question-tag multi">多选题</span>
+              <span class="question-score">8 分</span>
+            </div>
+            <p class="question-text">以下哪些属于 SQL 的 DDL (数据定义语言) 语句? (多选)</p>
+            <div class="options-list">
+              <div class="option-row">
+                <div class="option-dot filled"></div>
+                <span class="font-medium">A. CREATE TABLE</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot"></div>
+                <span>B. SELECT</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot filled"></div>
+                <span class="font-medium">C. ALTER INDEX</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot"></div>
+                <span>D. INSERT INTO</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question 3: Answered with expanded answer -->
+          <div class="question-card answered-card">
+            <div class="question-meta">
+              <span class="question-num success">3</span>
+              <span class="question-tag">单选题</span>
+              <span class="answered-badge">已答</span>
+              <span class="question-score">5 分</span>
+            </div>
+            <p class="question-text">在 SQL 中，用于从数据库中检索数据的语句是:</p>
+            <div class="options-list">
+              <div class="option-row">
+                <div class="option-dot"></div>
+                <span>A. UPDATE</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot correct">
+                  <svg width="10" height="10" viewBox="0 0 10 8" fill="none" class="m-auto">
+                    <path d="M1 4l2.5 2.5L9 1" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <span class="font-semibold text-[var(--color-success)]">B. SELECT</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot"></div>
+                <span>C. DELETE</span>
+              </div>
+              <div class="option-row">
+                <div class="option-dot"></div>
+                <span>D. INSERT</span>
+              </div>
+            </div>
+            <!-- Expanded answer block -->
+            <div class="answer-expanded">
+              <div class="answer-header">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="6" stroke="var(--color-success)" stroke-width="1.3" fill="none"/>
+                  <path d="M4.5 7l2 2L9.5 5.5" stroke="var(--color-success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="font-semibold text-[var(--color-success)]">正确答案: B</span>
+              </div>
+              <p class="m-0 text-[11px] text-[var(--color-success-text)] leading-1.5">SELECT 语句用于从数据库表中检索数据，是最常用的 SQL 查询语句。</p>
+            </div>
+          </div>
+
+          <!-- Question 4: Faded placeholder -->
+          <div class="question-card faded">
+            <div class="question-meta">
+              <span class="question-num muted">4</span>
+              <span class="question-tag multi">多选题</span>
+              <span class="question-score">8 分</span>
+            </div>
+            <p class="question-text faded-text">数据库事务的 ACID 特性包括哪些...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Action Buttons ===== -->
+    <section class="anim-fade-in mt-8" style="animation-delay: 160ms;">
+      <div class="action-row flex flex-wrap items-center gap-3">
+        <!-- Blue filled: Copy share link -->
+        <a href="#" class="btn-filled">
+          <svg class="btn-icon" viewBox="0 0 16 16" fill="none">
+            <rect x="5" y="5" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          复制分享链接
+        </a>
+
+        <!-- Filled: Download exam -->
+        <a href="#" class="btn-filled">
+          <img src="../assets/__svg.svg" width="16" height="16" alt="" style="filter: brightness(0) invert(1);">
+          下载试卷
+        </a>
+
+        <!-- Outlined: Open in new tab -->
+        <a href="#" class="btn-outlined">
+          <svg class="btn-icon" viewBox="0 0 16 16" fill="none">
+            <path d="M10 2h4v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 2L7 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M14 6v5.5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 11.5v-7A2.5 2.5 0 0 1 4.5 2H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          在新标签页打开
+        </a>
+
+        <!-- Ghost danger text: Delete -->
+        <a href="#" class="btn-ghost-danger">
+          删除此转换
+        </a>
+      </div>
+    </section>
+
+    <!-- ===== Details Card: 6-item grid ===== -->
+    <section class="anim-fade-in mt-8" style="animation-delay: 240ms;">
+      <div class="details-card">
+        <h3 class="text-[var(--text-base)] font-semibold text-[var(--color-text-primary)] m-0 mb-4">本次转换详情</h3>
+        <div class="details-grid">
+          <div class="detail-item">
+            <span class="detail-label">原始文件</span>
+            <span class="detail-value truncate">exam-2025-a.pdf</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">文件大小</span>
+            <span class="detail-value">2.4 MB</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">模型</span>
+            <span class="detail-value">GPT-4o</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">生成时间</span>
+            <span class="detail-value">2025-06-30 16:25</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">题目数量</span>
+            <span class="detail-value">25 题</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Token 消耗</span>
+            <span class="detail-value">~3,200 tokens</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="border-t border-[var(--color-border)] bg-[var(--color-bg)]">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <p class="text-center text-[var(--text-sm)] text-[var(--color-text-tertiary)] m-0">&copy; 2025 TPaper &middot; AI 试卷转换工具</p>
+    </div>
+  </footer>
+
+  <!-- ===== Styles ===== -->
+  <style>
+    /* Animations */
+    @media (prefers-reduced-motion: no-preference) {
+      .anim-fade-in {
+        opacity: 0;
+        transform: translateY(12px);
+        animation: fadeInUp 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
+      }
+      .checkmark-path {
+        stroke-dasharray: 40;
+        stroke-dashoffset: 40;
+        animation: drawCheck 0.5s 0.3s cubic-bezier(0.2, 0, 0, 1) forwards;
+      }
+      @keyframes fadeInUp {
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes drawCheck {
+        to { stroke-dashoffset: 0; }
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .anim-fade-in { opacity: 1; transform: none; }
+      .checkmark-path { stroke-dasharray: none; stroke-dashoffset: 0; }
+    }
+
+    /* Nav link */
+    .nav-link { transition: background-color var(--transition-fast), color var(--transition-fast); }
+
+    /* Result header */
+    .result-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+    .success-icon svg { display: block; }
+
+    /* Stat pills */
+    .stat-pill {
+      display: inline-flex; align-items: center;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm); font-weight: var(--font-medium);
+      color: var(--color-text-secondary);
+      background-color: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-light);
+    }
+
+    /* Preview card */
+    .preview-card {
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Browser bar */
+    .browser-bar {
+      display: flex; align-items: center; gap: var(--space-3);
+      padding: var(--space-2) var(--space-4);
+      background-color: var(--color-bg-subtle);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .browser-dots { display: flex; align-items: center; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .browser-url {
+      flex: 1; display: flex; align-items: center; gap: var(--space-2);
+      max-width: 440px; margin: 0 auto;
+      padding: var(--space-1) var(--space-3);
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      font-size: 12px; color: var(--color-text-tertiary);
+      font-family: var(--font-mono);
+    }
+
+    /* Progress bar */
+    .preview-progress { padding: var(--space-3) var(--space-4); background: var(--color-bg-elevated); border-bottom: 1px solid var(--color-border-light); }
+    .progress-label { font-size: 11px; font-weight: var(--font-medium); color: var(--color-text-tertiary); }
+    .progress-track { height: 4px; background-color: var(--color-border-light); border-radius: var(--radius-full); overflow: hidden; }
+    .progress-fill { height: 100%; width: 12%; background-color: var(--color-primary); border-radius: var(--radius-full); }
+
+    /* Preview content */
+    .preview-content { padding: var(--space-4) var(--space-5); max-height: 480px; overflow-y: auto; background-color: var(--color-bg-elevated); }
+    .preview-content::-webkit-scrollbar { width: 6px; }
+    .preview-content::-webkit-scrollbar-thumb { background-color: var(--color-border-hover); border-radius: var(--radius-full); }
+
+    /* Question cards */
+    .question-card {
+      background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+      margin-bottom: var(--space-2); transition: border-color var(--transition-fast);
+    }
+    .question-card:hover { border-color: var(--color-border-hover); }
+    .question-card.answered-card { border-color: var(--color-success); background: var(--color-success-bg); }
+    .question-card.faded { opacity: 0.5; }
+
+    .question-meta { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+    .question-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      font-size: 10px; font-weight: var(--font-bold); color: var(--color-text-inverse);
+      background-color: var(--color-primary);
+    }
+    .question-num.success { background-color: var(--color-success); }
+    .question-num.muted { background-color: var(--color-bg-tertiary); color: var(--color-text-tertiary); }
+    .question-tag {
+      display: inline-block; font-size: 11px; font-weight: var(--font-medium);
+      color: var(--color-primary); background: var(--color-primary-lighter);
+      padding: 1px 6px; border-radius: var(--radius-sm);
+    }
+    .question-tag.multi { color: var(--color-secondary-dark); background: var(--color-secondary-lighter); }
+    .answered-badge {
+      display: inline-block; font-size: 11px; font-weight: var(--font-semibold);
+      color: var(--color-text-inverse); background: var(--color-success);
+      padding: 1px 6px; border-radius: var(--radius-sm);
+    }
+    .question-score { font-size: 10px; color: var(--color-text-tertiary); margin-left: auto; }
+    .question-text { font-size: 12px; color: var(--color-text-secondary); line-height: 1.6; margin: 0; }
+    .question-text.faded-text { color: var(--color-text-tertiary); }
+
+    /* Options */
+    .options-list { display: flex; flex-direction: column; gap: 6px; margin-top: var(--space-2); }
+    .option-row { display: flex; align-items: center; gap: var(--space-2); font-size: 11px; color: var(--color-text-secondary); }
+    .option-dot {
+      width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--color-border-hover);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .option-dot.filled { border-color: var(--color-primary); background: var(--color-primary); }
+    .option-dot.correct { border-color: var(--color-success); background: var(--color-success); }
+
+    /* Expanded answer */
+    .answer-expanded { background: var(--color-success-bg); border: 1px solid var(--color-success); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); margin-top: var(--space-2); }
+    .answer-header { display: flex; align-items: center; gap: var(--space-1); margin-bottom: 4px; }
+
+    /* Action buttons */
+    .btn-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .btn-filled {
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-5); border-radius: var(--radius-xl);
+      font-size: var(--text-sm); font-weight: var(--font-medium);
+      color: var(--color-text-inverse); background: var(--color-primary);
+      border: none; text-decoration: none; cursor: pointer;
+      transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .btn-filled:hover { background: var(--color-primary-dark); box-shadow: var(--shadow-sm); }
+
+    .btn-outlined {
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-5); border-radius: var(--radius-xl);
+      font-size: var(--text-sm); font-weight: var(--font-medium);
+      color: var(--color-primary); background: transparent;
+      border: 1px solid var(--color-border); text-decoration: none; cursor: pointer;
+      transition: background-color var(--transition-fast), border-color var(--transition-fast);
+    }
+    .btn-outlined:hover { background: var(--color-primary-lighter); border-color: var(--color-primary-200); }
+
+    .btn-ghost-danger {
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-5); border-radius: var(--radius-xl);
+      font-size: var(--text-sm); font-weight: var(--font-medium);
+      color: var(--color-error); background: transparent; border: none;
+      text-decoration: none; cursor: pointer;
+      transition: background-color var(--transition-fast);
+    }
+    .btn-ghost-danger:hover { background: var(--color-error-bg); }
+
+    /* Details card */
+    .details-card {
+      background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); padding: var(--space-5) var(--space-6);
+      box-shadow: var(--shadow-md);
+    }
+    .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+    @media (max-width: 639px) { .details-grid { grid-template-columns: repeat(2, 1fr); } }
+    .detail-item { background: var(--color-bg-subtle); border-radius: var(--radius-md); padding: var(--space-4) var(--space-5); }
+    .detail-label { display: block; font-size: 11px; font-weight: var(--font-medium); color: var(--color-text-tertiary); margin-bottom: var(--space-1); }
+    .detail-value { display: block; font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--color-text-secondary); }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+</body>
+</html>

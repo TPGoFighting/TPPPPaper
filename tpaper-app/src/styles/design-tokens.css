@@ -1,0 +1,226 @@
+/* TPaper Brand CSS — Google Material Design 3 Style */
+:root {
+  /* ── MD3 Primary palette (Blue) ── */
+  --color-primary: #1a73e8;
+  --color-primary-light: #4285f4;
+  --color-primary-lighter: #d2e3fc;
+  --color-primary-dark: #1557b0;
+  --color-primary-50: #e8f0fe;
+  --color-primary-100: #d2e3fc;
+  --color-primary-200: #aecbfa;
+  --color-primary-300: #8ab4f8;
+  --color-primary-400: #669df6;
+  --color-primary-500: #1a73e8;
+  --color-primary-600: #1557b0;
+  --color-primary-700: #174ea6;
+
+  /* ── MD3 Secondary palette (Teal) ── */
+  --color-secondary: #00bcd4;
+  --color-secondary-light: #26c6da;
+  --color-secondary-lighter: #b2ebf2;
+  --color-secondary-dark: #0097a7;
+
+  /* ── Gradient accents ── */
+  --gradient-primary: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+  --gradient-hero: linear-gradient(135deg, #1a73e8 0%, #34a853 50%, #fbbc05 100%);
+  --gradient-hero-mesh: linear-gradient(135deg, #e8f0fe 0%, #e6f4ea 50%, #fef7e0 100%);
+  --gradient-cta: linear-gradient(135deg, #1a73e8 0%, #34a853 100%);
+  --gradient-primary-hover: linear-gradient(135deg, #1557b0 0%, #1a73e8 100%);
+  --gradient-text: linear-gradient(135deg, #1a73e8 0%, #4285f4 50%, #34a853 100%);
+  --gradient-primary-text: linear-gradient(135deg, #1a73e8 0%, #4285f4 50%, #34a853 100%);
+  --gradient-cta-hover: linear-gradient(135deg, #1557b0 0%, #2d9248 100%);
+  --gradient-primary-soft: linear-gradient(135deg, #e8f0fe 0%, #e6f4ea 100%);
+  --color-gradient-end: #34a853;
+  --color-gradient-start: #1a73e8;
+
+  /* ── MD3 Surface & Background ── */
+  --color-bg: #ffffff;
+  --color-bg-base: #ffffff;
+  --color-background: #ffffff;
+  --color-bg-page: #f8f9fa;
+  --color-bg-elevated: #ffffff;
+  --color-bg-subtle: #f1f3f4;
+  --color-bg-surface: #ffffff;
+  --color-bg-muted: #f1f3f4;
+  --color-bg-secondary: #f1f3f4;
+  --color-bg-tertiary: #e8eaed;
+  --color-bg-hover: #f1f3f4;
+  --color-surface: #ffffff;
+  --color-white: #ffffff;
+
+  /* ── MD3 Text colors ── */
+  --color-text-primary: #202124;
+  --color-text-secondary: #5f6368;
+  --color-text-tertiary: #80868b;
+  --color-text-muted: #80868b;
+  --color-text-link: #1a73e8;
+  --color-text-inverse: #ffffff;
+
+  /* ── MD3 Semantic colors ── */
+  --state-success: #34a853;
+  --state-success-bg: #e6f4ea;
+  --state-warning: #f9ab00;
+  --state-warning-bg: #fef7e0;
+  --state-error: #d93025;
+  --state-error-bg: #fce8e6;
+  --state-info: #1a73e8;
+  --state-info-bg: #e8f0fe;
+  /* Semantic aliases */
+  --color-success: #34a853;
+  --color-success-bg: #e6f4ea;
+  --color-success-text: #1e8e3e;
+  --color-success-50: #e6f4ea;
+  --color-success-600: #1e8e3e;
+  --color-warning: #f9ab00;
+  --color-warning-bg: #fef7e0;
+  --color-warning-text: #ea8600;
+  --color-info: #1a73e8;
+  --color-info-bg: #e8f0fe;
+  --color-info-text: #1557b0;
+  --color-error: #d93025;
+  --color-error-light: #fce8e6;
+  --color-error-text: #c5221f;
+  --color-error-50: #fce8e6;
+  --color-error-500: #d93025;
+  --color-error-600: #c5221f;
+  --color-error-bg: #fce8e6;
+
+  /* ── MD3 Border ── */
+  --color-border: #dadce0;
+  --color-border-hover: #bdc1c6;
+  --color-border-light: #e8eaed;
+  --color-border-focus: #1a73e8;
+
+  /* ── MD3 Radius (tonal, 8/12/16/28) ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 28px;
+  --radius-2xl: 28px;
+  --radius-3xl: 28px;
+  --radius-full: 9999px;
+
+  /* ── MD3 Elevation (tonal shadow system) ── */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.05);
+  --shadow-sm: 0 1px 3px rgba(60,64,67,.15);
+  --shadow-md: 0 4px 8px rgba(60,64,67,.15);
+  --shadow-lg: 0 8px 24px rgba(60,64,67,.15);
+  --shadow-xl: 0 12px 32px rgba(60,64,67,.15);
+  --shadow-float: 0 16px 48px rgba(60,64,67,.18);
+  --shadow-glow-primary: 0 0 0 1px rgba(26,115,232,.3);
+  --shadow-glow-success: 0 0 0 1px rgba(52,168,83,.3);
+  --shadow-hover: 0 2px 8px rgba(60,64,67,.12);
+  --shadow-glow: 0 0 0 1px rgba(26,115,232,.3);
+  --shadow-card: 0 1px 2px rgba(60,64,67,.08);
+
+  /* ── MD3 Typography (Google Sans / Product Sans) ── */
+  --font-display: 'Geist', 'Inter', 'Roboto', system-ui, sans-serif;
+  --font-body: 'Geist', 'Inter', 'Noto Sans SC', 'Roboto', system-ui, sans-serif;
+  --font-sans: 'Geist', 'Inter', 'Noto Sans SC', 'Roboto', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Roboto Mono', 'Consolas', monospace;
+  --font-family-base: 'Geist', 'Inter', 'Noto Sans SC', 'Roboto', system-ui, sans-serif;
+
+  /* Type scale (MD3) */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+  --text-5xl: 3.25rem;
+  /* Font size aliases */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+
+  /* Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 700;
+  /* Weight aliases */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 700;
+
+  /* Line heights */
+  --leading-tight: 1.25;
+  --leading-snug: 1.4;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+  /* Line height aliases */
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+
+  /* ── Layout ── */
+  --max-width: 1200px;
+  --nav-height: 64px;
+  --nav-blur: blur(12px);
+
+  /* ── Spacing ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  /* Spacing aliases */
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* ── Transitions (MD3 standard easing) ── */
+  --transition-fast: 200ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-base: 300ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-slow: 500ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-normal: 300ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-spring: 500ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Dark mode overrides (MD3 dark theme) */
+html.dark {
+  --color-bg: #1b1b1f;
+  --color-bg-base: #1b1b1f;
+  --color-background: #1b1b1f;
+  --color-bg-page: #131316;
+  --color-bg-elevated: #2b2b30;
+  --color-bg-subtle: #28282c;
+  --color-bg-surface: #2b2b30;
+  --color-bg-muted: #28282c;
+  --color-bg-secondary: #28282c;
+  --color-bg-tertiary: #3c4043;
+  --color-bg-hover: #3c4043;
+  --color-surface: #2b2b30;
+  --color-text-primary: #e8eaed;
+  --color-text-secondary: #9aa0a6;
+  --color-text-tertiary: #80868b;
+  --color-text-muted: #80868b;
+  --color-text-link: #8ab4f8;
+  --color-border: #3c4043;
+  --color-border-hover: #5f6368;
+  --color-border-light: #3c4043;
+  --color-primary-lighter: #1a3a5c;
+  --color-primary-50: #1a3a5c;
+  --color-primary-100: #1a3a5c;
+  --color-error-50: #3c2021;
+  --color-error-bg: #3c2021;
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.3);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+  --shadow-md: 0 4px 8px rgba(0,0,0,.3);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.4);
+  --shadow-xl: 0 12px 32px rgba(0,0,0,.4);
+  --shadow-float: 0 16px 48px rgba(0,0,0,.5);
+}
