@@ -1,50 +1,45 @@
 """任务队列抽象。
 
-Redis 可用时使用 Celery，否则静默降级（由 API 进程内轮询处理）。
+使用 Celery 分发任务到 Redis broker。
+API 容器安装了 worker 包，可直接调用 send_task。
 """
-import json
-from typing import Any
-
 from .config import settings
 
 
-async def enqueue_parse_job(paper_id: int, source_file_id: int) -> None:
-    """入队解析任务。优先使用 Celery，降级到 Redis LPUSH。"""
-    # 尝试 Celery
-    try:
-        from worker.tasks import process_paper
-        process_paper.delay(paper_id, source_file_id)
-        return
-    except Exception:
-        pass
+def _celery_send(task_name: str, args: tuple) -> None:
+    """通过 Celery send_task 发送任务（不要求任务在本地定义）。"""
+    from celery import Celery
+    app = Celery("tpaper-client", broker=settings.redis_url)
+    app.send_task(task_name, args=args, queue="tpaper")
 
-    # 降级：直接 Redis LPUSH（兼容旧 worker）
+
+async def enqueue_parse_job(paper_id: int, source_file_id: int) -> None:
+    """入队解析任务。"""
+    if not settings.redis_url:
+        return
     try:
-        import redis.asyncio as aioredis
-        r = aioredis.from_url(settings.redis_url)
-        await r.lpush(
-            "tpaper:jobs",
-            json.dumps({
-                "type": "parse",
-                "paper_id": paper_id,
-                "source_file_id": source_file_id,
-            }),
-        )
-        await r.close()
+        _celery_send("worker.tasks.process_paper", (paper_id, source_file_id))
     except Exception:
-        # 开发环境无 Redis 时静默降级，由进程内轮询处理
         pass
 
 
 async def enqueue_job(job_id: int) -> None:
     """入队已有任务的重试。"""
+    if not settings.redis_url:
+        return
     try:
-        import redis.asyncio as aioredis
-        r = aioredis.from_url(settings.redis_url)
-        await r.lpush(
-            "tpaper:jobs",
-            json.dumps({"type": "retry", "job_id": job_id}),
-        )
-        await r.close()
+        from .database import SessionLocal
+        from .models import ProcessingJob
+
+        db = SessionLocal()
+        try:
+            job = db.get(ProcessingJob, job_id)
+            if job and job.paper:
+                _celery_send(
+                    "worker.tasks.process_paper",
+                    (job.paper_id, job.paper.source_file_id),
+                )
+        finally:
+            db.close()
     except Exception:
         pass
