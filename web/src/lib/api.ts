@@ -16,28 +16,84 @@ export type PaperStatus =
   | 'failed';
 
 export type PaperMode = 'faithful' | 'lecture';
+export type ApiPaperMode = 'faithful_transcription' | 'lecture_to_quiz';
 
 export interface Paper {
-  id: string;
+  id: number;
   title: string;
   status: PaperStatus;
-  mode: PaperMode;
-  source_file: string;
+  mode: ApiPaperMode;
+  slug: string;
+  source_file_id?: number | null;
+  source_file_name: string;
   question_count: number;
   created_at: string;
   updated_at: string;
-  slug?: string;
+  current_draft_id?: number | null;
+  current_publication_id?: number | null;
   progress?: number;
-  error?: string;
+  error_message?: string;
 }
 
 export interface Question {
   id: string;
-  type: 'single_choice' | 'multiple_choice' | 'true_false' | 'short_answer';
+  type: 'single_choice' | 'multi_choice' | 'true_false' | 'fill_blank' | 'subjective';
+  number?: number | null;
   stem: string;
-  options?: string[];
-  answer?: string;
+  options?: { key: string; text: string }[];
+  correct_keys?: string[];
+  true_false_answer?: boolean | null;
+  acceptable_answers?: string[][];
+  reference_answer?: string;
   explanation?: string;
+  knowledge_points?: string[];
+  needs_review?: boolean;
+}
+
+export interface Draft {
+  id: number;
+  paper_id: number;
+  version: number;
+  document: {
+    title?: string;
+    sections?: { id: string; title: string; question_ids: string[] }[];
+    questions?: Question[];
+    [key: string]: unknown;
+  };
+  presentation_html: string;
+  theme_css: string;
+  validation_result: { errors?: string[]; is_valid?: boolean };
+  is_valid: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Publication {
+  id: number;
+  paper_id: number;
+  version: number;
+  compiled_html: string;
+  compiled_css: string;
+  content_hash: string;
+  published_at: string;
+  published_by: string;
+  is_withdrawn: boolean;
+}
+
+export interface ModelProfile {
+  id: number;
+  name: string;
+  protocol: 'openai_compatible' | 'anthropic_compatible';
+  base_url: string;
+  text_model: string;
+  multimodal_model: string;
+  supports_vision: boolean;
+  timeout_seconds: number;
+  max_concurrency: number;
+  max_retries: number;
+  allow_private_network: boolean;
+  is_active: boolean;
+  api_key_masked: string;
 }
 
 export interface ApiError {
@@ -77,6 +133,10 @@ async function request<T>(
     ...(customHeaders as Record<string, string>),
   };
 
+  if (rest.method && rest.method !== 'GET' && rest.method !== 'HEAD') {
+    headers['X-Requested-With'] = 'XMLHttpRequest';
+  }
+
   if (auth) {
     const token = getToken();
     if (token) {
@@ -86,6 +146,7 @@ async function request<T>(
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...rest,
+    credentials: 'include',
     headers,
   });
 
@@ -134,6 +195,38 @@ export const api = {
     }),
   delete: <T>(path: string, options?: FetchOptions) =>
     request<T>(path, { ...options, method: 'DELETE' }),
+  upload: async <T>(path: string, formData: FormData, options: FetchOptions = {}) => {
+    const { auth = true, headers: customHeaders, ...rest } = options;
+    const headers: Record<string, string> = {
+      'X-Requested-With': 'XMLHttpRequest',
+      ...(customHeaders as Record<string, string>),
+    };
+
+    if (auth) {
+      const token = getToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+
+    const res = await fetch(`${BASE_URL}${path}`, {
+      ...rest,
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+      headers,
+    });
+
+    if (!res.ok) {
+      let details: unknown;
+      try {
+        details = await res.json();
+      } catch {}
+      throw new ApiClientError(`请求失败: ${res.status} ${res.statusText}`, res.status, details);
+    }
+
+    return res.json() as Promise<T>;
+  },
 };
 
 export { ApiClientError };

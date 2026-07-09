@@ -197,6 +197,11 @@ class PaperOut(BaseModel):
     status: PaperStatus
     current_draft_id: int | None = None
     current_publication_id: int | None = None
+    source_file_id: int | None = None
+    source_file_name: str = ""
+    question_count: int = 0
+    progress: int | None = None
+    error_message: str = ""
     created_at: datetime
     updated_at: datetime
 

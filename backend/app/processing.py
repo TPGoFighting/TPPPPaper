@@ -113,6 +113,107 @@ def preprocess(source_file: SourceFile) -> dict:
         return {"pages": [{"page": 1, "text": "", "needs_multimodal": True}], "page_count": 1}
 
 
+def _flatten_preprocessed_text(preprocessed: dict) -> str:
+    chunks: list[str] = []
+    for page in preprocessed.get("pages", []):
+        text = (page.get("text") or "").strip()
+        if text:
+            chunks.append(text)
+    return "\n\n".join(chunks).strip()
+
+
+def build_fallback_document(title: str, preprocessed: dict, mode: str) -> dict:
+    """在模型不可用时生成一版可审核草稿，保证上传-审核-发布流程不断线。"""
+    source_text = _flatten_preprocessed_text(preprocessed)
+    lines = [line.strip() for line in source_text.splitlines() if line.strip()]
+    if not lines:
+        lines = ["暂未从源文件中提取到足够文字，请在审核页补充题干与答案。"]
+
+    question_lines = lines[:12]
+    questions = []
+    for index, line in enumerate(question_lines, start=1):
+        is_blank = "____" in line or "（" in line and "）" in line
+        question_type = "fill_blank" if is_blank else "subjective"
+        question = {
+            "id": f"q{index}",
+            "number": index,
+            "type": question_type,
+            "stem": line,
+            "score": 0,
+            "source_page": 1,
+            "confidence": 0.45,
+            "needs_review": True,
+            "is_ai_generated": mode == "lecture_to_quiz",
+            "explanation": "这是系统在模型不可用时生成的兜底草稿，请人工审核。",
+        }
+        if question_type == "fill_blank":
+            question["acceptable_answers"] = [["请补充答案"]]
+            question["match_rule"] = "contains"
+        else:
+            question["reference_answer"] = "请在审核页补充参考答案。"
+            question["scoring_points"] = ["人工确认题意", "补全答案或评分要点"]
+        questions.append(question)
+
+    return {
+        "title": title or "未命名试卷",
+        "language": "zh-CN",
+        "metadata": {
+            "generated_by": "local_fallback",
+            "mode": mode,
+            "review_required": True,
+            "source_excerpt": source_text[:1000],
+        },
+        "sections": [
+            {
+                "id": "s1",
+                "title": "待审核题目",
+                "source_page": 1,
+                "question_ids": [q["id"] for q in questions],
+            }
+        ],
+        "questions": questions,
+    }
+
+
+def ensure_publishable_document(document: dict) -> dict:
+    """补齐模型漏填的题型必需字段，让草稿可审核、可发布。"""
+    questions = document.get("questions") or []
+    for question in questions:
+        qtype = question.get("type")
+        question.setdefault("needs_review", False)
+        if qtype in ("single_choice", "multi_choice"):
+            options = question.get("options") or []
+            if not options:
+                question["options"] = [
+                    {"key": "A", "text": "请补充选项 A"},
+                    {"key": "B", "text": "请补充选项 B"},
+                ]
+                question["correct_keys"] = ["A"]
+                question["needs_review"] = True
+            elif not question.get("correct_keys"):
+                first_key = options[0].get("key", "A") if isinstance(options[0], dict) else "A"
+                question["correct_keys"] = [first_key]
+                question["needs_review"] = True
+        elif qtype == "true_false" and question.get("true_false_answer") is None:
+            question["true_false_answer"] = True
+            question["needs_review"] = True
+        elif qtype == "fill_blank" and not question.get("acceptable_answers"):
+            question["acceptable_answers"] = [["请补充答案"]]
+            question["match_rule"] = "contains"
+            question["needs_review"] = True
+        elif qtype == "subjective":
+            has_answer = (
+                question.get("reference_answer")
+                or question.get("scoring_points")
+                or question.get("explanation")
+            )
+            if not has_answer:
+                question["reference_answer"] = "请在审核页补充参考答案。"
+                question["scoring_points"] = ["人工确认题意", "补全答案或评分要点"]
+                question["needs_review"] = True
+    return document
+
+
 # ── 两阶段模型处理（SPEC 14.2）──
 
 async def stage1_extract(adapter: OpenAICompatibleAdapter, preprocessed: dict, vision_adapter: OpenAICompatibleAdapter | None = None) -> list[dict]:
@@ -187,34 +288,31 @@ async def process_paper(paper_id: int, source_file_id: int) -> None:
             logger.error(f"Paper {paper_id} 或 SourceFile {source_file_id} 不存在")
             return
 
-        # 获取活跃模型 Profile
+        # 获取活跃模型 Profile。没有配置时使用本地兜底生成器，前端仍可审核发布。
         profile = db.query(ModelProfile).filter(ModelProfile.is_active.is_(True)).first()
-        if not profile:
-            paper.status = "failed"
-            db.commit()
-            logger.error("无可用模型 Profile")
-            return
-
-        api_key = decrypt_secret(profile.encrypted_api_key) if profile.encrypted_api_key else ""
-        text_adapter = OpenAICompatibleAdapter(
-            base_url=profile.base_url,
-            api_key=api_key,
-            model=profile.text_model,
-            timeout=profile.timeout_seconds,
-            allow_private_network=profile.allow_private_network,
-        )
-        vision_adapter = OpenAICompatibleAdapter(
-            base_url=profile.base_url,
-            api_key=api_key,
-            model=profile.multimodal_model,
-            timeout=profile.timeout_seconds,
-            allow_private_network=profile.allow_private_network,
-        )
+        text_adapter = None
+        vision_adapter = None
+        if profile:
+            api_key = decrypt_secret(profile.encrypted_api_key) if profile.encrypted_api_key else ""
+            text_adapter = OpenAICompatibleAdapter(
+                base_url=profile.base_url,
+                api_key=api_key,
+                model=profile.text_model,
+                timeout=profile.timeout_seconds,
+                allow_private_network=profile.allow_private_network,
+            )
+            vision_adapter = OpenAICompatibleAdapter(
+                base_url=profile.base_url,
+                api_key=api_key,
+                model=profile.multimodal_model,
+                timeout=profile.timeout_seconds,
+                allow_private_network=profile.allow_private_network,
+            )
 
         # 创建任务记录
         job = ProcessingJob(
             paper_id=paper_id,
-            model_profile_id=profile.id,
+            model_profile_id=profile.id if profile else None,
             job_type="parse",
             status="running",
             stage="preprocessing",
@@ -232,26 +330,40 @@ async def process_paper(paper_id: int, source_file_id: int) -> None:
         source.page_count = preprocessed["page_count"]
         db.commit()
 
-        # 阶段 2：来源提取
-        logger.info(f"[Paper {paper_id}] 来源提取...")
-        extracted = await stage1_extract(
-            text_adapter, preprocessed,
-            vision_adapter if profile.supports_vision else None,
-        )
-        job.stage = "generating_document"
-        job.current_page = preprocessed["page_count"]
-        db.commit()
+        if text_adapter:
+            try:
+                # 阶段 2：来源提取
+                logger.info(f"[Paper {paper_id}] 来源提取...")
+                extracted = await stage1_extract(
+                    text_adapter, preprocessed,
+                    vision_adapter if profile and profile.supports_vision else None,
+                )
+                job.stage = "generating_document"
+                job.current_page = preprocessed["page_count"]
+                db.commit()
 
-        # 阶段 3：生成 PaperDocument
-        logger.info(f"[Paper {paper_id}] 生成结构化文档...")
-        paper.status = "modeling"
-        db.commit()
-        document = await stage2_generate_document(text_adapter, extracted, paper.mode)
+                # 阶段 3：生成 PaperDocument
+                logger.info(f"[Paper {paper_id}] 生成结构化文档...")
+                paper.status = "modeling"
+                db.commit()
+                document = await stage2_generate_document(text_adapter, extracted, paper.mode)
+            except Exception as model_error:
+                logger.warning(f"[Paper {paper_id}] 模型生成失败，改用本地兜底: {model_error}")
+                document = build_fallback_document(paper.title, preprocessed, paper.mode)
+                job.error_code = type(model_error).__name__
+                job.error_message = str(model_error)[:500]
+        else:
+            logger.warning(f"[Paper {paper_id}] 未配置模型 Profile，使用本地兜底")
+            job.stage = "generating_document"
+            job.current_page = preprocessed["page_count"]
+            db.commit()
+            document = build_fallback_document(paper.title, preprocessed, paper.mode)
 
         # 阶段 4：网页生成
         job.stage = "generating_presentation"
         db.commit()
         logger.info(f"[Paper {paper_id}] 生成网页...")
+        document = ensure_publishable_document(document)
         html, css = await stage3_generate_presentation(text_adapter, document)
 
         # 阶段 5：净化
@@ -259,16 +371,32 @@ async def process_paper(paper_id: int, source_file_id: int) -> None:
         db.commit()
         clean_html, _ = sanitize_html(html)
         clean_css, _ = sanitize_css(css, scope_selector="")
+        validation_errors: list[str] = []
+        try:
+            from .schemas import PaperDocument
+
+            validation_errors = PaperDocument.model_validate(document).semantic_validate()
+        except Exception as e:
+            validation_errors = [f"文档结构错误: {e}"]
+        is_valid = len(validation_errors) == 0
+
+        last_draft = (
+            db.query(PaperDraft)
+            .filter(PaperDraft.paper_id == paper_id)
+            .order_by(PaperDraft.version.desc())
+            .first()
+        )
+        next_draft_version = (last_draft.version + 1) if last_draft else 1
 
         # 创建草稿
         draft = PaperDraft(
             paper_id=paper_id,
-            version=1,
+            version=next_draft_version,
             document=document,
             presentation_html=clean_html,
             theme_css=clean_css,
-            is_valid=False,
-            validation_result={"errors": [], "is_valid": False},
+            is_valid=is_valid,
+            validation_result={"errors": validation_errors, "is_valid": is_valid},
         )
         db.add(draft)
         db.flush()
@@ -278,7 +406,7 @@ async def process_paper(paper_id: int, source_file_id: int) -> None:
         job.status = "succeeded"
         job.stage = "done"
         job.call_summary = {
-            "model": profile.text_model,
+            "model": profile.text_model if profile else "local_fallback",
             "pages_processed": preprocessed["page_count"],
         }
         db.commit()

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
+import BrandMark from '@/components/BrandMark';
 
 const navItems = [
   { href: '/admin', label: '首页', icon: 'home' },
@@ -112,17 +113,9 @@ function SidebarContent({
       <Link
         href="/admin"
         onClick={onNavigate}
-        className="flex items-center gap-2 px-5 h-[var(--nav-height)] border-b border-[var(--color-border-light)]"
+        className="flex items-center px-5 h-[var(--nav-height)] border-b border-[var(--color-border-light)] bg-black/20"
       >
-        <span
-          className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center text-[var(--color-text-inverse)] font-bold text-sm"
-          style={{ background: 'var(--gradient-primary)' }}
-        >
-          T
-        </span>
-        <span className="text-base font-semibold text-[var(--color-text-primary)]">
-          TPaper
-        </span>
+        <BrandMark href="" />
       </Link>
 
       {/* 导航 */}
@@ -134,7 +127,7 @@ function SidebarContent({
             onClick={onNavigate}
             className={`inline-flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-[var(--radius-sm)] transition-colors ${
               isActive(item.href)
-                ? 'text-[var(--color-primary)] bg-[var(--color-primary-50)]'
+                ? 'text-white bg-[var(--color-primary)] shadow-[var(--shadow-glow-primary)]'
                 : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
             }`}
           >

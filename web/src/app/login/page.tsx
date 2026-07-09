@@ -3,52 +3,45 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import BrandMark from '@/components/BrandMark';
+import { api } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!email || !password) {
-      setError('请填写邮箱和密码');
+    if (!username || !password) {
+      setError('请填写账号和密码');
       return;
     }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await api.post('/auth/login', { username, password }, { auth: false });
       setLoading(false);
       router.push('/admin');
-    }, 1000);
+    } catch (err) {
+      setLoading(false);
+      setError(err instanceof Error ? err.message : '登录失败');
+    }
   };
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-[var(--color-bg-page)] px-4 py-8">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2"
-          >
-            <span
-              className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-[var(--color-text-inverse)] font-bold text-lg"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              T
-            </span>
-            <span className="text-xl font-semibold text-[var(--color-text-primary)]">
-              TPaper
-            </span>
-          </Link>
+        <div className="mb-8 flex justify-center">
+          <BrandMark />
         </div>
 
         {/* 登录卡片 */}
-        <div className="bg-[var(--color-bg)] rounded-[var(--radius-lg)] shadow-md border border-[var(--color-border-light)] p-6 sm:p-8">
+        <div className="pixel-corners bg-[var(--color-bg)] shadow-md border border-[var(--color-border-light)] p-6 sm:p-8">
           <h1 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">
             欢迎回来
           </h1>
@@ -59,8 +52,8 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 邮箱 */}
             <div>
-              <label htmlFor="email" className="text-sm font-medium text-[var(--color-text-primary)] block mb-2">
-                邮箱
+              <label htmlFor="username" className="text-sm font-medium text-[var(--color-text-primary)] block mb-2">
+                管理员账号
               </label>
               <div className="relative">
                 <svg
@@ -78,13 +71,13 @@ export default function LoginPage() {
                   <polyline points="22,6 12,13 2,6" />
                 </svg>
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className="w-full pl-10 pr-3 py-2.5 text-sm bg-[var(--color-bg-page)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-50)] transition-colors"
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="admin"
+                  autoComplete="username"
+                  className="tp-input pl-10 pr-3 py-2.5 text-sm placeholder:text-[var(--color-text-tertiary)]"
                 />
               </div>
             </div>
@@ -116,7 +109,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="输入密码"
                   autoComplete="current-password"
-                  className="w-full pl-10 pr-11 py-2.5 text-sm bg-[var(--color-bg-page)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-primary-50)] transition-colors"
+                  className="tp-input pl-10 pr-11 py-2.5 text-sm placeholder:text-[var(--color-text-tertiary)]"
                 />
                 <button
                   type="button"
@@ -155,7 +148,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-[var(--color-text-inverse)] bg-[var(--color-primary)] rounded-[var(--radius-full)] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="tp-button-primary w-full px-5 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

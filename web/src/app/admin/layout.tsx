@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
+import BrandMark from '@/components/BrandMark';
 
 export default function AdminLayout({
   children,
@@ -45,9 +46,7 @@ export default function AdminLayout({
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <span className="text-base font-semibold text-[var(--color-text-primary)]">
-              TPaper
-            </span>
+            <BrandMark href="/admin" compact />
             <div className="w-10" />
           </div>
         </header>

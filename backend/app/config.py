@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     env: str = Field(default="dev", description="dev / prod")
     debug: bool = False
     api_prefix: str = "/api"
-    public_base_url: str = "http://localhost:5173"
+    public_base_url: str = "http://localhost:3000"
 
     # ── 数据库 ──
     database_url: str = "sqlite:///./tpaper.db"
@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     admin_password_hash: str = ""  # passlib bcrypt 哈希
 
     # ── 存储卷 ──
-    storage_root: str = "/data/storage"
+    storage_root: str = "./data/storage"
     source_files_namespace: str = "sources"
     assets_namespace: str = "assets"
     rendered_namespace: str = "rendered"
@@ -58,7 +58,18 @@ class Settings(BaseSettings):
     upload_max_pages: int = 200
 
     # ── CORS（开发环境）──
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+    # ── 可选默认模型配置（仅从环境变量注入，绝不写死密钥）──
+    default_model_profile_name: str = "LongCat"
+    default_model_base_url: str = ""
+    default_model_api_key: str = ""
+    default_model_name: str = "LongCat-2.0"
 
     # ── Worker ──
     worker_concurrency: int = 4

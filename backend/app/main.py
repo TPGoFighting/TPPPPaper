@@ -28,6 +28,31 @@ async def lifespan(app: FastAPI):
     settings.storage_path
     # 创建数据库表（本地开发模式，SQLite）
     Base.metadata.create_all(bind=engine)
+    # 如果环境变量提供了默认模型配置，启动时自动写入或更新，便于本地跑通全链路。
+    if settings.default_model_base_url and settings.default_model_api_key:
+        from .database import SessionLocal
+        from .models import ModelProfile
+        from .security import encrypt_secret
+
+        db = SessionLocal()
+        try:
+            profile = (
+                db.query(ModelProfile)
+                .filter(ModelProfile.name == settings.default_model_profile_name)
+                .first()
+            )
+            if not profile:
+                profile = ModelProfile(name=settings.default_model_profile_name)
+                db.add(profile)
+            profile.base_url = settings.default_model_base_url
+            profile.encrypted_api_key = encrypt_secret(settings.default_model_api_key)
+            profile.text_model = settings.default_model_name
+            profile.multimodal_model = settings.default_model_name
+            profile.is_active = True
+            profile.allow_private_network = False
+            db.commit()
+        finally:
+            db.close()
     # 启动后台任务处理器（本地开发模式，无需 Redis）
     from .processing import process_queued_papers
     import asyncio

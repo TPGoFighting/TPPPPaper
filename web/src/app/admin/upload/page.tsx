@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 
 type UploadMode = 'faithful' | 'lecture';
 
@@ -9,13 +11,16 @@ interface SelectedFile {
   name: string;
   size: number;
   type: string;
+  raw: File;
 }
 
 export default function UploadPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<UploadMode>('faithful');
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<SelectedFile | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -23,24 +28,34 @@ export default function UploadPage() {
     setDragging(false);
     const dropped = e.dataTransfer.files[0];
     if (dropped) {
-      setFile({ name: dropped.name, size: dropped.size, type: dropped.type });
+      setError('');
+      setFile({ name: dropped.name, size: dropped.size, type: dropped.type, raw: dropped });
     }
   }, []);
 
   const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (selected) {
-      setFile({ name: selected.name, size: selected.size, type: selected.type });
+      setError('');
+      setFile({ name: selected.name, size: selected.size, type: selected.type, raw: selected });
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
-    setTimeout(() => {
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file.raw);
+      const apiMode = mode === 'faithful' ? 'faithful_transcription' : 'lecture_to_quiz';
+      const result = await api.upload<{ paper_id: number }>('/uploads/file?mode=' + apiMode, formData);
       setUploading(false);
-      window.location.href = '/admin';
-    }, 1500);
+      router.push(`/admin/papers/${result.paper_id}`);
+    } catch (err) {
+      setUploading(false);
+      setError(err instanceof Error ? err.message : '上传失败');
+    }
   };
 
   const formatSize = (bytes: number) => {
@@ -295,6 +310,12 @@ export default function UploadPage() {
             确认并提交
           </h2>
         </div>
+
+        {error && (
+          <div className="mb-4 rounded-[var(--radius-sm)] bg-[var(--color-error-bg)] px-3 py-2 text-sm text-[var(--color-error-text)]">
+            {error}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3">
           <button

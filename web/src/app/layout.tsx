@@ -1,19 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Noto_Sans_SC } from 'next/font/google';
 import './globals.css';
-
-const geistSans = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist',
-  display: 'swap',
-});
-
-const notoSansSC = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-noto-sans-sc',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: {
@@ -21,12 +7,16 @@ export const metadata: Metadata = {
     template: '%s · TPaper',
   },
   description: 'AI 试卷转换工具 - 管理后台与公开页面',
+  icons: {
+    icon: '/brand/tp-logo.jpg',
+    apple: '/brand/tp-logo.jpg',
+  },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#1a73e8',
+  themeColor: '#050505',
 };
 
 export default function RootLayout({
@@ -35,10 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="zh-CN"
-      className={`${geistSans.variable} ${notoSansSC.variable}`}
-    >
+    <html lang="zh-CN">
       <body>{children}</body>
     </html>
   );

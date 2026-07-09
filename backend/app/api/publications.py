@@ -102,14 +102,6 @@ async def publish(body: PublishIn, db: DBSession, admin: AdminUser, _: CSRFProte
     return pub
 
 
-@router.get("/{publication_id}", response_model=PublicationOut)
-async def get_publication(publication_id: int, db: DBSession, _: AdminUser):
-    pub = db.get(PublicationVersion, publication_id)
-    if not pub:
-        raise HTTPException(status_code=404, detail="未找到")
-    return pub
-
-
 @router.get("/paper/{paper_id}", response_model=list[PublicationOut])
 async def list_publications(paper_id: int, db: DBSession, _: AdminUser):
     return (
@@ -118,6 +110,14 @@ async def list_publications(paper_id: int, db: DBSession, _: AdminUser):
         .order_by(PublicationVersion.version.desc())
         .all()
     )
+
+
+@router.get("/{publication_id}", response_model=PublicationOut)
+async def get_publication(publication_id: int, db: DBSession, _: AdminUser):
+    pub = db.get(PublicationVersion, publication_id)
+    if not pub:
+        raise HTTPException(status_code=404, detail="未找到")
+    return pub
 
 
 @router.post("/{publication_id}/withdraw", status_code=202)

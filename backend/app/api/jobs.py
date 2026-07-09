@@ -8,14 +8,6 @@ from ..schemas import JobOut
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
-@router.get("/{job_id}", response_model=JobOut)
-async def get_job(job_id: int, db: DBSession, _: AdminUser):
-    job = db.get(ProcessingJob, job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="未找到")
-    return job
-
-
 @router.get("/paper/{paper_id}", response_model=list[JobOut])
 async def list_jobs_by_paper(paper_id: int, db: DBSession, _: AdminUser):
     return (
@@ -24,6 +16,14 @@ async def list_jobs_by_paper(paper_id: int, db: DBSession, _: AdminUser):
         .order_by(ProcessingJob.created_at.desc())
         .all()
     )
+
+
+@router.get("/{job_id}", response_model=JobOut)
+async def get_job(job_id: int, db: DBSession, _: AdminUser):
+    job = db.get(ProcessingJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="未找到")
+    return job
 
 
 @router.post("/{job_id}/cancel", status_code=202)

@@ -7,15 +7,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev libxml2 libxslt1.1 \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装依赖
-COPY backend/pyproject.toml ./backend/
-RUN pip install --no-cache-dir -e backend/
-COPY worker/pyproject.toml ./worker/
-RUN pip install --no-cache-dir -e worker/
-
-# 复制代码（worker 复用 backend/app）
-COPY backend/app ./backend/app
+# 安装依赖并复制代码（worker 复用 backend/app）
+COPY backend ./backend
 COPY worker ./worker
+RUN pip install --no-cache-dir ./backend ./worker
 
 WORKDIR /app
 

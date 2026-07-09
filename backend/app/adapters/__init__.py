@@ -53,6 +53,101 @@ class OpenAICompatibleAdapter:
             "Content-Type": "application/json",
         }
 
+    def _is_anthropic_endpoint(self) -> bool:
+        return "anthropic" in self.base_url.lower()
+
+    def _anthropic_headers(self) -> dict[str, str]:
+        return {
+            "x-api-key": self.api_key,
+            "Authorization": f"Bearer {self.api_key}",
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+        }
+
+    def _to_anthropic_messages(
+        self, messages: list[dict[str, Any]], response_format_json: bool
+    ) -> tuple[str, list[dict[str, Any]]]:
+        system_parts: list[str] = []
+        converted: list[dict[str, Any]] = []
+
+        for message in messages:
+            role = message.get("role", "user")
+            content = message.get("content", "")
+            if role == "system":
+                system_parts.append(str(content))
+                continue
+            converted.append({
+                "role": "assistant" if role == "assistant" else "user",
+                "content": content,
+            })
+
+        if response_format_json:
+            system_parts.append("你必须只返回一个合法 JSON 对象，不要输出 Markdown 或解释文字。")
+
+        return "\n\n".join(system_parts), converted or [{"role": "user", "content": "ping"}]
+
+    async def _anthropic_chat(
+        self,
+        messages: list[dict[str, Any]],
+        temperature: float,
+        max_tokens: int | None,
+        response_format_json: bool,
+    ) -> ModelCallResult:
+        self._validate_url()
+        url = f"{self.base_url}/v1/messages"
+        system, anthropic_messages = self._to_anthropic_messages(messages, response_format_json)
+
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": anthropic_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens or 4096,
+        }
+        if system:
+            payload["system"] = system
+
+        import time
+        start = time.monotonic()
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                resp = await client.post(url, json=payload, headers=self._anthropic_headers())
+                resp.raise_for_status()
+                data = resp.json()
+        except httpx.HTTPStatusError as e:
+            return ModelCallResult(
+                content="",
+                success=False,
+                model=self.model,
+                latency_ms=int((time.monotonic() - start) * 1000),
+                error=f"HTTP {e.response.status_code}: {e.response.text[:200]}",
+            )
+        except Exception as e:
+            return ModelCallResult(
+                content="",
+                success=False,
+                model=self.model,
+                latency_ms=int((time.monotonic() - start) * 1000),
+                error=str(e),
+            )
+
+        content_blocks = data.get("content", [])
+        content = ""
+        for block in content_blocks:
+            if isinstance(block, dict) and block.get("type") == "text":
+                content += block.get("text", "")
+        usage = data.get("usage", {})
+        return ModelCallResult(
+            content=content,
+            success=True,
+            usage={
+                "prompt_tokens": usage.get("input_tokens", 0),
+                "completion_tokens": usage.get("output_tokens", 0),
+                "total_tokens": usage.get("input_tokens", 0) + usage.get("output_tokens", 0),
+            },
+            model=data.get("model", self.model),
+            latency_ms=int((time.monotonic() - start) * 1000),
+        )
+
     async def chat(
         self,
         messages: list[dict[str, Any]],
@@ -61,6 +156,14 @@ class OpenAICompatibleAdapter:
         response_format_json: bool = False,
     ) -> ModelCallResult:
         """调用 chat/completions。"""
+        if self._is_anthropic_endpoint():
+            return await self._anthropic_chat(
+                messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format_json=response_format_json,
+            )
+
         self._validate_url()
         url = f"{self.base_url}/chat/completions"
 
