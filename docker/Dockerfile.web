@@ -7,6 +7,10 @@ RUN npm install
 
 COPY web/ ./
 
+# Next.js 在 build 阶段就把 rewrites 写死进镜像，
+# 因此 API_INTERNAL_URL 必须在构建时给定（运行时注入无效）
+ENV API_INTERNAL_URL=http://api:8000
+
 RUN npm run build
 
 EXPOSE 3000
