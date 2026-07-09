@@ -1,19 +1,25 @@
 FROM python:3.11-slim
 
+# 国内镜像源加速
+RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
+
 WORKDIR /app
 
-# 系统依赖（含文档处理所需的系统库）
+# 系统依赖（含 Tesseract OCR + 中文语言包）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev libxml2 libxslt1.1 \
+    build-essential libpq-dev curl \
+    tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装依赖并复制代码（worker 复用 backend/app）
+# 安装依赖并复制代码
 COPY backend ./backend
 COPY worker ./worker
-RUN pip install --no-cache-dir ./backend ./worker
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple ./backend ./worker
 
 WORKDIR /app
 
 EXPOSE 9000
 
-CMD ["python", "worker/main.py"]
+# 启动 Celery Worker
+CMD ["celery", "-A", "worker.celery_app:celery_app", "worker", \
+     "--loglevel=info", "--concurrency=4", "-Q", "tpaper"]

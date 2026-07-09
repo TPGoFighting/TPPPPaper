@@ -24,6 +24,18 @@ services:
       - "5432:5432"
 
   # ── Redis（任务队列）──
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── API 服务 ──
   api:
     build:
       context: .
@@ -32,10 +44,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       ENV: prod
       DATABASE_URL: postgresql+psycopg://tpaper:${POSTGRES_PASSWORD:-tpaper}@postgres:5432/tpaper
-      REDIS_URL: ""
+      REDIS_URL: redis://redis:6379/0
       MASTER_SECRET: ${MASTER_SECRET:?必须设置 MASTER_SECRET}
       SESSION_SECRET: ${SESSION_SECRET:?必须设置 SESSION_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
@@ -55,6 +69,34 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ── Worker（Celery 任务处理）──
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ENV: prod
+      DATABASE_URL: postgresql+psycopg://tpaper:${POSTGRES_PASSWORD:-tpaper}@postgres:5432/tpaper
+      REDIS_URL: redis://redis:6379/0
+      MASTER_SECRET: ${MASTER_SECRET:?必须设置 MASTER_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET:?必须设置 SESSION_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+      STORAGE_ROOT: /data/storage
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://tpaper.tpgofighting.top}
+      DEFAULT_MODEL_PROFILE_NAME: ${DEFAULT_MODEL_PROFILE_NAME:-LongCat}
+      DEFAULT_MODEL_BASE_URL: ${DEFAULT_MODEL_BASE_URL:-}
+      DEFAULT_MODEL_API_KEY: ${DEFAULT_MODEL_API_KEY:-}
+      DEFAULT_MODEL_NAME: ${DEFAULT_MODEL_NAME:-LongCat-2.0}
+    volumes:
+      - storage_data:/data/storage
 
   # ── Web 前端 ──
   web:
@@ -79,4 +121,5 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   storage_data:

@@ -1,5 +1,9 @@
 """任务路由。对应 SPEC 13: /api/jobs/*"""
+import asyncio
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 
 from ..deps import AdminUser, CSRFProtected, DBSession
 from ..models import ProcessingJob
@@ -52,3 +56,47 @@ async def retry_job(job_id: int, db: DBSession, _: AdminUser, __: CSRFProtected)
     from ..queue import enqueue_job
     await enqueue_job(job_id=job.id)
     return {"status": "queued", "retry_count": job.retry_count}
+
+
+@router.get("/{job_id}/stream")
+async def stream_job_progress(job_id: int, db: DBSession, _: AdminUser):
+    """SSE 实时推送任务进度。"""
+    job = db.get(ProcessingJob, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="未找到")
+
+    async def event_generator():
+        while True:
+            db2 = None
+            try:
+                from ..database import SessionLocal
+                db2 = SessionLocal()
+                j = db2.get(ProcessingJob, job_id)
+                if not j:
+                    break
+                data = {
+                    "job_id": j.id,
+                    "status": j.status,
+                    "stage": j.stage,
+                    "current_page": j.current_page,
+                    "total_pages": j.total_pages,
+                    "failed_pages": j.failed_pages or [],
+                    "error_message": j.error_message,
+                }
+                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+                if j.status in ("succeeded", "failed", "cancelled"):
+                    break
+            finally:
+                if db2:
+                    db2.close()
+            await asyncio.sleep(1)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

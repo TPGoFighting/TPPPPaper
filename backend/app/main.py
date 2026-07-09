@@ -53,12 +53,19 @@ async def lifespan(app: FastAPI):
             db.commit()
         finally:
             db.close()
-    # 启动后台任务处理器（本地开发模式，无需 Redis）
-    from .processing import process_queued_papers
-    import asyncio
-    task = asyncio.create_task(process_queued_papers())
+
+    # 开发模式：Redis 不可用时启动进程内轮询
+    use_inprocess = not settings.redis_url
+    task = None
+    if use_inprocess:
+        from .processing import process_queued_papers
+        import asyncio
+        task = asyncio.create_task(process_queued_papers())
+
     yield
-    task.cancel()
+
+    if task:
+        task.cancel()
 
 
 app = FastAPI(
@@ -70,7 +77,7 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# CORS（开发环境）
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

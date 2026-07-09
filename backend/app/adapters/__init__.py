@@ -1,14 +1,46 @@
 """模型适配器：OpenAI-compatible 协议。
 
 对应 SPEC 7.7、14.2、14.3。MVP 首先实现 OpenAI-compatible 协议适配器。
+支持自动重试、指数退避、速率限制。
 """
+import asyncio
 import json
+import logging
+import time
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
 
 from ..security import validate_url_safety
+
+logger = logging.getLogger("tpaper.adapters")
+
+
+class RateLimiter:
+    """令牌桶速率限制器。"""
+
+    def __init__(self, max_calls: int, period: float):
+        self.max_calls = max_calls
+        self.period = period
+        self.calls: deque = deque()
+        self._lock = asyncio.Lock()
+
+    async def acquire(self):
+        async with self._lock:
+            now = time.monotonic()
+            while self.calls and self.calls[0] <= now - self.period:
+                self.calls.popleft()
+            if len(self.calls) >= self.max_calls:
+                wait = self.calls[0] + self.period - now
+                if wait > 0:
+                    await asyncio.sleep(wait)
+            self.calls.append(time.monotonic())
+
+
+# 全局速率限制器：10 次/分钟
+_global_rate_limiter = RateLimiter(max_calls=10, period=60)
 
 
 @dataclass
@@ -174,72 +206,98 @@ class OpenAICompatibleAdapter:
             latency_ms=int((time.monotonic() - start) * 1000),
         )
 
+    def _is_retryable(self, error: str) -> bool:
+        """判断错误是否可重试。"""
+        retryable = ["timeout", "529", "503", "429", "rate_limit", "overloaded", "connection"]
+        return any(r in error.lower() for r in retryable)
+
+    async def _call_with_retry(self, coro_factory, max_retries: int = 3):
+        """带重试和指数退避的 API 调用。"""
+        for attempt in range(max_retries):
+            try:
+                await _global_rate_limiter.acquire()
+                result = await coro_factory()
+                if result.success:
+                    return result
+                if self._is_retryable(result.error) and attempt < max_retries - 1:
+                    wait = min(60 * (2 ** attempt), 300)
+                    logger.warning(f"API 调用失败 (attempt {attempt+1}/{max_retries})，{wait}s 后重试: {result.error}")
+                    await asyncio.sleep(wait)
+                    continue
+                return result
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait = min(60 * (2 ** attempt), 300)
+                    logger.warning(f"API 调用异常 (attempt {attempt+1}/{max_retries})，{wait}s 后重试: {e}")
+                    await asyncio.sleep(wait)
+                    continue
+                return ModelCallResult(content="", success=False, model=self.model, error=str(e))
+        return ModelCallResult(content="", success=False, model=self.model, error="Max retries exceeded")
+
     async def chat(
         self,
         messages: list[dict[str, Any]],
         temperature: float = 0.2,
         max_tokens: int | None = None,
         response_format_json: bool = False,
+        max_retries: int = 3,
     ) -> ModelCallResult:
-        """调用 chat/completions。"""
+        """调用 chat/completions（带重试和速率限制）。"""
         if self._is_anthropic_endpoint():
-            return await self._anthropic_chat(
-                messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                response_format_json=response_format_json,
+            return await self._call_with_retry(
+                lambda: self._anthropic_chat(
+                    messages, temperature=temperature,
+                    max_tokens=max_tokens, response_format_json=response_format_json,
+                ),
+                max_retries=max_retries,
             )
 
-        self._validate_url()
-        url = f"{self.base_url}/chat/completions"
+        async def _do_call():
+            self._validate_url()
+            url = f"{self.base_url}/chat/completions"
+            payload: dict[str, Any] = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+            }
+            if max_tokens:
+                payload["max_tokens"] = max_tokens
+            if response_format_json:
+                payload["response_format"] = {"type": "json_object"}
 
-        payload: dict[str, Any] = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-        }
-        if max_tokens:
-            payload["max_tokens"] = max_tokens
-        if response_format_json:
-            payload["response_format"] = {"type": "json_object"}
+            start = time.monotonic()
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    resp = await client.post(url, json=payload, headers=self._headers())
+                    resp.raise_for_status()
+                    data = resp.json()
+            except httpx.HTTPStatusError as e:
+                return ModelCallResult(
+                    content="", success=False, model=self.model,
+                    latency_ms=int((time.monotonic() - start) * 1000),
+                    error=f"HTTP {e.response.status_code}: {e.response.text[:200]}",
+                )
+            except Exception as e:
+                return ModelCallResult(
+                    content="", success=False, model=self.model,
+                    latency_ms=int((time.monotonic() - start) * 1000),
+                    error=str(e),
+                )
 
-        import time
-        start = time.monotonic()
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                resp = await client.post(url, json=payload, headers=self._headers())
-                resp.raise_for_status()
-                data = resp.json()
-        except httpx.HTTPStatusError as e:
+            content = data["choices"][0]["message"]["content"]
+            usage = data.get("usage", {})
             return ModelCallResult(
-                content="",
-                success=False,
-                model=self.model,
+                content=content, success=True,
+                usage={
+                    "prompt_tokens": usage.get("prompt_tokens", 0),
+                    "completion_tokens": usage.get("completion_tokens", 0),
+                    "total_tokens": usage.get("total_tokens", 0),
+                },
+                model=data.get("model", self.model),
                 latency_ms=int((time.monotonic() - start) * 1000),
-                error=f"HTTP {e.response.status_code}: {e.response.text[:200]}",
-            )
-        except Exception as e:
-            return ModelCallResult(
-                content="",
-                success=False,
-                model=self.model,
-                latency_ms=int((time.monotonic() - start) * 1000),
-                error=str(e),
             )
 
-        content = data["choices"][0]["message"]["content"]
-        usage = data.get("usage", {})
-        return ModelCallResult(
-            content=content,
-            success=True,
-            usage={
-                "prompt_tokens": usage.get("prompt_tokens", 0),
-                "completion_tokens": usage.get("completion_tokens", 0),
-                "total_tokens": usage.get("total_tokens", 0),
-            },
-            model=data.get("model", self.model),
-            latency_ms=int((time.monotonic() - start) * 1000),
-        )
+        return await self._call_with_retry(_do_call, max_retries=max_retries)
 
     async def chat_with_image(
         self,

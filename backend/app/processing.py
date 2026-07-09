@@ -268,45 +268,106 @@ def ensure_publishable_document(document: dict) -> dict:
 # ── 两阶段模型处理（SPEC 14.2）──
 
 async def stage1_extract(adapter: OpenAICompatibleAdapter, preprocessed: dict, vision_adapter: OpenAICompatibleAdapter | None = None) -> list[dict]:
-    """第一阶段：来源提取。多模态失败时自动降级为纯文本。"""
-    extracted = []
-    for page in preprocessed["pages"]:
-        if page.get("needs_multimodal") and page.get("image_b64") and vision_adapter:
-            # 多模态提取
-            prompt = f"提取第 {page['page']} 页的所有文字、题目结构和图表信息。返回 JSON。"
-            result = await vision_adapter.chat_with_image(
-                prompt, page["image_b64"], page.get("mime", "image/png")
-            )
-            if not result.success:
-                # 降级：多模态失败时用纯文本适配器
-                logger.warning(f"多模态提取失败，降级为纯文本: {result.error}")
+    """第一阶段：来源提取。并行处理所有页面。"""
+    pages = preprocessed["pages"]
+    semaphore = asyncio.Semaphore(4)  # 并发限制
+
+    async def _extract_one(page: dict) -> dict:
+        async with semaphore:
+            if page.get("needs_multimodal") and page.get("image_b64") and vision_adapter:
+                prompt = f"提取第 {page['page']} 页的所有文字、题目结构和图表信息。返回 JSON。"
+                result = await vision_adapter.chat_with_image(
+                    prompt, page["image_b64"], page.get("mime", "image/png")
+                )
+                if not result.success:
+                    logger.warning(f"多模态提取失败，降级为纯文本: {result.error}")
+                    msgs = build_extraction_prompt(page.get("text", ""), page["page"])
+                    result = await adapter.chat(msgs, response_format_json=True)
+            else:
                 msgs = build_extraction_prompt(page.get("text", ""), page["page"])
                 result = await adapter.chat(msgs, response_format_json=True)
-        else:
-            msgs = build_extraction_prompt(page.get("text", ""), page["page"])
-            result = await adapter.chat(msgs, response_format_json=True)
 
-        if result.success:
-            try:
-                parsed = json.loads(result.content)
-                extracted.append(parsed)
-                items_count = len(parsed.get("items", []))
-                logger.info(f"第 {page['page']} 页提取成功: {items_count} items, confidence={parsed.get('confidence', '?')}")
-            except json.JSONDecodeError:
-                logger.warning(f"第 {page['page']} 页 JSON 解析失败，原始内容前200字: {result.content[:200]}")
-                extracted.append({"page": page["page"], "text": result.content, "confidence": 0.5})
-        else:
-            logger.warning(f"第 {page['page']} 页提取失败: {result.error}")
-            extracted.append({"page": page["page"], "text": "", "error": result.error})
+            if result.success:
+                try:
+                    parsed = json.loads(result.content)
+                    items_count = len(parsed.get("items", []))
+                    logger.info(f"第 {page['page']} 页提取成功: {items_count} items, confidence={parsed.get('confidence', '?')}")
+                    return parsed
+                except json.JSONDecodeError:
+                    logger.warning(f"第 {page['page']} 页 JSON 解析失败")
+                    return {"page": page["page"], "text": result.content, "confidence": 0.5}
+            else:
+                logger.warning(f"第 {page['page']} 页提取失败: {result.error}")
+                return {"page": page["page"], "text": "", "error": result.error}
+
+    # 按页码顺序并行提取
+    tasks = [_extract_one(page) for page in pages]
+    results = await asyncio.gather(*tasks)
+    # 按原始顺序排列
+    extracted = sorted(results, key=lambda r: r.get("page", 0))
     return extracted
+
+
+def _merge_documents(partials: list[dict]) -> dict:
+    """合并多个分批生成的 PaperDocument 为一个。"""
+    all_sections: list[dict] = []
+    all_questions: list[dict] = []
+    q_num = 1
+    for doc in partials:
+        for section in doc.get("sections", []):
+            all_sections.append(section)
+        for q in doc.get("questions", []):
+            q["number"] = q_num
+            q["id"] = f"q_{q_num}"
+            all_questions.append(q)
+            q_num += 1
+    title = partials[0].get("title", "试卷") if partials else "试卷"
+    return {
+        "title": title,
+        "language": "zh-CN",
+        "metadata": partials[0].get("metadata", {}) if partials else {},
+        "sections": all_sections,
+        "questions": all_questions,
+    }
 
 
 async def stage2_generate_document(
     adapter: OpenAICompatibleAdapter, extracted: list[dict], mode: str
 ) -> dict:
-    """第二阶段：生成 PaperDocument。"""
+    """第二阶段：生成 PaperDocument。分批处理避免超时。"""
     total_items = sum(len(e.get("items", [])) for e in extracted)
     logger.info(f"文档生成输入: {len(extracted)} pages, {total_items} total items")
+
+    # 小文档直接一次生成
+    CHUNK_SIZE = 10
+    if len(extracted) <= CHUNK_SIZE:
+        return await _generate_document_chunk(adapter, extracted, mode)
+
+    # 大文档分批生成再合并
+    partials: list[dict] = []
+    for i in range(0, len(extracted), CHUNK_SIZE):
+        chunk = extracted[i : i + CHUNK_SIZE]
+        chunk_items = sum(len(e.get("items", [])) for e in chunk)
+        logger.info(f"文档生成分批: pages {i+1}-{i+len(chunk)}, {chunk_items} items")
+        try:
+            doc = await _generate_document_chunk(adapter, chunk, mode)
+            partials.append(doc)
+            logger.info(f"分批 {i//CHUNK_SIZE + 1} 成功: {len(doc.get('questions', []))} questions")
+        except Exception as e:
+            logger.warning(f"分批 {i//CHUNK_SIZE + 1} 失败: {e}，跳过该批次")
+
+    if not partials:
+        raise RuntimeError("所有分批生成均失败")
+
+    merged = _merge_documents(partials)
+    logger.info(f"合并完成: {len(merged.get('questions', []))} questions total")
+    return merged
+
+
+async def _generate_document_chunk(
+    adapter: OpenAICompatibleAdapter, extracted: list[dict], mode: str
+) -> dict:
+    """单批文档生成。"""
     msgs = build_document_prompt(extracted, mode)
     result = await adapter.chat(msgs, response_format_json=True)
     if not result.success:
@@ -314,9 +375,7 @@ async def stage2_generate_document(
     try:
         return json.loads(result.content)
     except json.JSONDecodeError as e:
-        # SPEC 14.4: JSON 不合法时自动进行一次结构修复
         logger.warning(f"JSON 解析失败，尝试修复: {e}")
-        # 简单修复：提取第一个 { 到最后一个 }
         content = result.content
         start = content.find("{")
         end = content.rfind("}")

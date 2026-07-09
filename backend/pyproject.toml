@@ -30,7 +30,6 @@ dependencies = [
     "python-slugify>=8.0.4",
     "Pillow>=11.0.0",
     "pydub>=0.25.1",
-    "arq>=0.26.0",
 ]
 
 [project.optional-dependencies]
