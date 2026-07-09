@@ -1,15 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import BrandMark from '@/components/BrandMark';
+import { api } from '@/lib/api';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        await api.get('/auth/me');
+        setChecking(false);
+      } catch {
+        router.replace('/login');
+      }
+    }
+    checkAuth();
+  }, [router]);
+
+  if (checking) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--color-bg-page)]">
+        <p className="text-sm text-[var(--color-text-tertiary)]">验证登录状态...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[100dvh] bg-[var(--color-bg-page)]">
