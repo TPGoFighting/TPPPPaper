@@ -81,14 +81,19 @@ class Paper(TimestampMixin, Base):
         ForeignKey("source_files.id"), nullable=True
     )
 
-    source_file: Mapped["SourceFile | None"] = relationship(foreign_keys=[source_file_id])
+    source_file: Mapped["SourceFile | None"] = relationship(
+        foreign_keys=[source_file_id], cascade="all, delete-orphan"
+    )
     drafts: Mapped[list["PaperDraft"]] = relationship(
-        back_populates="paper", foreign_keys="PaperDraft.paper_id"
+        back_populates="paper", foreign_keys="PaperDraft.paper_id", cascade="all, delete-orphan"
     )
     publications: Mapped[list["PublicationVersion"]] = relationship(
-        back_populates="paper", foreign_keys="PublicationVersion.paper_id"
+        back_populates="paper", foreign_keys="PublicationVersion.paper_id", cascade="all, delete-orphan"
     )
-    jobs: Mapped[list["ProcessingJob"]] = relationship(back_populates="paper")
+    jobs: Mapped[list["ProcessingJob"]] = relationship(back_populates="paper", cascade="all, delete-orphan")
+    assets: Mapped[list["Asset"]] = relationship(
+        foreign_keys="Asset.paper_id", cascade="all, delete-orphan"
+    )
 
     @property
     def source_file_name(self) -> str:
@@ -257,3 +262,5 @@ class Asset(TimestampMixin, Base):
     source_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
     alt_text: Mapped[str] = mapped_column(String(500), default="")
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    paper: Mapped["Paper | None"] = relationship(back_populates="assets", foreign_keys=[paper_id])
