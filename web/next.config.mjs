@@ -6,10 +6,15 @@ const nextConfig = {
     if (apiUrl && !apiUrl.startsWith('/api')) {
       return [];
     }
+    const apiInternalUrl = process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:8000';
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:8000'}/api/:path*`,
+        destination: `${apiInternalUrl}/api/:path*`,
+      },
+      {
+        source: '/health',
+        destination: `${apiInternalUrl}/health`,
       },
     ];
   },
