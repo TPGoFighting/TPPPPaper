@@ -5,9 +5,10 @@ RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.li
 
 WORKDIR /app
 
-# 系统依赖
+# 系统依赖（含 Tesseract OCR + 中文语言包，用于扫描 PDF 文字识别）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev curl \
+    tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装依赖并复制应用代码

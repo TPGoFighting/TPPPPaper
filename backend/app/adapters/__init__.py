@@ -76,10 +76,36 @@ class OpenAICompatibleAdapter:
             if role == "system":
                 system_parts.append(str(content))
                 continue
-            converted.append({
-                "role": "assistant" if role == "assistant" else "user",
-                "content": content,
-            })
+
+            # 处理多模态内容（OpenAI 格式 → Anthropic 格式）
+            if isinstance(content, list):
+                anthropic_content: list[dict[str, Any]] = []
+                for part in content:
+                    if part.get("type") == "text":
+                        anthropic_content.append({"type": "text", "text": part["text"]})
+                    elif part.get("type") == "image_url":
+                        url = part.get("image_url", {}).get("url", "")
+                        if url.startswith("data:"):
+                            # 解析 data:image/png;base64,... 格式
+                            header, data = url.split(",", 1)
+                            media_type = header.split(";")[0].split(":")[1]
+                            anthropic_content.append({
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": media_type,
+                                    "data": data,
+                                },
+                            })
+                converted.append({
+                    "role": "assistant" if role == "assistant" else "user",
+                    "content": anthropic_content or [{"type": "text", "text": "ping"}],
+                })
+            else:
+                converted.append({
+                    "role": "assistant" if role == "assistant" else "user",
+                    "content": content,
+                })
 
         if response_format_json:
             system_parts.append("你必须只返回一个合法 JSON 对象，不要输出 Markdown 或解释文字。")

@@ -36,7 +36,7 @@ logger = logging.getLogger("tpaper.processing")
 def preprocess_pdf(content: bytes) -> dict:
     """PDF 预处理：提取文本、版面块和图片。
 
-    MVP 简化实现：尝试用 pypdf 提取文本；文本不足时标记需要多模态。
+    MVP 简化实现：尝试用 pypdf 提取文本；文本不足时用 pymupdf 渲染页面为图片供多模态识别。
     """
     extracted_pages = []
     try:
@@ -56,6 +56,57 @@ def preprocess_pdf(content: bytes) -> dict:
     except Exception as e:
         logger.error(f"PDF 解析失败: {e}")
         extracted_pages = [{"page": 1, "text": "", "needs_multimodal": True, "error": str(e)}]
+
+    # 对需要多模态的页面，并行 Tesseract OCR 提取文字
+    needs_ocr = [p for p in extracted_pages if p.get("needs_multimodal") and not p.get("text", "").strip()]
+    if needs_ocr:
+        try:
+            import fitz  # pymupdf
+            import pytesseract
+            from PIL import Image
+            import io as _io
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            doc = fitz.open(stream=content, filetype="pdf")
+            mat = fitz.Matrix(2, 2)
+
+            def _ocr_page(page_info: dict) -> dict:
+                page_idx = page_info["page"] - 1
+                if page_idx < 0 or page_idx >= len(doc):
+                    return page_info
+                page = doc[page_idx]
+                pix = page.get_pixmap(matrix=mat)
+                img_bytes = pix.tobytes("png")
+                img = Image.open(_io.BytesIO(img_bytes))
+                ocr_text = pytesseract.image_to_string(img, lang="chi_sim+chi_tra+eng")
+                if ocr_text.strip():
+                    page_info["text"] = ocr_text.strip()
+                    page_info["needs_multimodal"] = False
+                page_info["image_b64"] = base64.b64encode(img_bytes).decode()
+                page_info["mime"] = "image/png"
+                return page_info
+
+            max_workers = min(8, len(needs_ocr))
+            logger.info(f"并行 OCR: {len(needs_ocr)} pages, workers={max_workers}")
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = {pool.submit(_ocr_page, p): p for p in needs_ocr}
+                for future in as_completed(futures):
+                    try:
+                        result = future.result()
+                        if result.get("text"):
+                            logger.info(f"第 {result['page']} 页 OCR 提取: {len(result['text'])} chars")
+                        else:
+                            logger.warning(f"第 {result['page']} 页 OCR 未提取到文字")
+                    except Exception as e:
+                        p = futures[future]
+                        logger.error(f"第 {p['page']} 页 OCR 失败: {e}")
+
+            doc.close()
+        except ImportError as e:
+            logger.warning(f"OCR 依赖未安装: {e}")
+        except Exception as e:
+            logger.error(f"PDF OCR 失败: {e}")
+
     return {"pages": extracted_pages, "page_count": len(extracted_pages)}
 
 
@@ -237,8 +288,12 @@ async def stage1_extract(adapter: OpenAICompatibleAdapter, preprocessed: dict, v
 
         if result.success:
             try:
-                extracted.append(json.loads(result.content))
+                parsed = json.loads(result.content)
+                extracted.append(parsed)
+                items_count = len(parsed.get("items", []))
+                logger.info(f"第 {page['page']} 页提取成功: {items_count} items, confidence={parsed.get('confidence', '?')}")
             except json.JSONDecodeError:
+                logger.warning(f"第 {page['page']} 页 JSON 解析失败，原始内容前200字: {result.content[:200]}")
                 extracted.append({"page": page["page"], "text": result.content, "confidence": 0.5})
         else:
             logger.warning(f"第 {page['page']} 页提取失败: {result.error}")
@@ -250,6 +305,8 @@ async def stage2_generate_document(
     adapter: OpenAICompatibleAdapter, extracted: list[dict], mode: str
 ) -> dict:
     """第二阶段：生成 PaperDocument。"""
+    total_items = sum(len(e.get("items", [])) for e in extracted)
+    logger.info(f"文档生成输入: {len(extracted)} pages, {total_items} total items")
     msgs = build_document_prompt(extracted, mode)
     result = await adapter.chat(msgs, response_format_json=True)
     if not result.success:
