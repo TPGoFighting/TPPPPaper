@@ -90,6 +90,44 @@ class Paper(TimestampMixin, Base):
     )
     jobs: Mapped[list["ProcessingJob"]] = relationship(back_populates="paper")
 
+    @property
+    def source_file_name(self) -> str:
+        return self.source_file.original_filename if self.source_file else ""
+
+    @property
+    def question_count(self) -> int:
+        draft = next((d for d in self.drafts if d.id == self.current_draft_id), None)
+        if not draft and self.drafts:
+            draft = max(self.drafts, key=lambda d: d.version)
+        document = draft.document if draft else {}
+        questions = document.get("questions", []) if isinstance(document, dict) else []
+        return len(questions)
+
+    @property
+    def progress(self) -> int | None:
+        running = next(
+            (job for job in self.jobs if job.status in ("queued", "running")),
+            None,
+        )
+        if not running:
+            return None
+        if running.total_pages:
+            return min(95, max(5, int((running.current_page / running.total_pages) * 80) + 10))
+        stage_progress = {
+            "preprocessing": 15,
+            "extracting": 35,
+            "generating_document": 60,
+            "generating_presentation": 78,
+            "sanitizing": 90,
+            "done": 100,
+        }
+        return stage_progress.get(running.stage, 10)
+
+    @property
+    def error_message(self) -> str:
+        failed = next((job for job in self.jobs if job.status == "failed" and job.error_message), None)
+        return failed.error_message if failed else ""
+
 
 class SourceFile(TimestampMixin, Base):
     """SPEC 11.2 - 上传的源文件。
@@ -104,12 +142,12 @@ class SourceFile(TimestampMixin, Base):
     # 私有存储键，如 sources/2026/06/abc.pdf
     storage_key: Mapped[str] = mapped_column(String(500), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
-    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 文件签名（magic bytes 检测结果）
-    detected_type: Mapped[str] = mapped_column(String(50), default="")
+    detected_type: Mapped[str] = mapped_column(String(128), default="")
     # 到期时间，到期后由清理任务删除
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
