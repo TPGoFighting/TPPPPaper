@@ -24,43 +24,31 @@ services:
       - "5432:5432"
 
   # ── Redis（任务队列）──
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ── API 后端 ──
   api:
     build:
-      context: ..
+      context: .
       dockerfile: docker/Dockerfile.api
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     environment:
       ENV: prod
       DATABASE_URL: postgresql+psycopg://tpaper:${POSTGRES_PASSWORD:-tpaper}@postgres:5432/tpaper
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: ""
       MASTER_SECRET: ${MASTER_SECRET:?必须设置 MASTER_SECRET}
       SESSION_SECRET: ${SESSION_SECRET:?必须设置 SESSION_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
       STORAGE_ROOT: /data/storage
-      CORS_ORIGINS: '["http://localhost:3000"]'
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://tpaper.tpgofighting.top}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["https://tpaper.tpgofighting.top","http://localhost:3000","http://127.0.0.1:3000"]}
+      DEFAULT_MODEL_PROFILE_NAME: ${DEFAULT_MODEL_PROFILE_NAME:-LongCat}
+      DEFAULT_MODEL_BASE_URL: ${DEFAULT_MODEL_BASE_URL:-}
+      DEFAULT_MODEL_API_KEY: ${DEFAULT_MODEL_API_KEY:-}
+      DEFAULT_MODEL_NAME: ${DEFAULT_MODEL_NAME:-LongCat-2.0}
     volumes:
       - storage_data:/data/storage
-    ports:
-      - "8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
@@ -68,43 +56,17 @@ services:
       retries: 5
       start_period: 30s
 
-  # ── Worker ──
-  worker:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.worker
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      ENV: prod
-      DATABASE_URL: postgresql+psycopg://tpaper:${POSTGRES_PASSWORD:-tpaper}@postgres:5432/tpaper
-      REDIS_URL: redis://redis:6379/0
-      MASTER_SECRET: ${MASTER_SECRET:?必须设置 MASTER_SECRET}
-      STORAGE_ROOT: /data/storage
-      WORKER_CONCURRENCY: "4"
-    volumes:
-      - storage_data:/data/storage
-    healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # ── Web 前端 ──
   web:
     build:
-      context: ..
+      context: .
       dockerfile: docker/Dockerfile.web
     restart: unless-stopped
     depends_on:
       api:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      API_INTERNAL_URL: http://api:8000
       NODE_ENV: production
     ports:
       - "3000:3000"
@@ -117,5 +79,4 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
   storage_data:
