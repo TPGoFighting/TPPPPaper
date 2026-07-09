@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# 国内镜像源加速（apt + pip）
+RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
+
 WORKDIR /app
 
 # 系统依赖
@@ -7,14 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装依赖
-COPY backend/pyproject.toml ./backend/
-RUN pip install --no-cache-dir -e backend/
-
-# 复制应用代码
-COPY backend/app ./backend/app
-COPY backend/alembic ./backend/alembic
-COPY backend/alembic.ini ./backend/
+# 安装依赖并复制应用代码
+COPY backend ./backend
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple ./backend
 
 WORKDIR /app/backend
 
