@@ -51,11 +51,11 @@ async def create_paper(body: PaperCreate, db: DBSession, _: AdminUser, __: CSRFP
 
 @router.delete("/{paper_id}", status_code=204)
 async def delete_paper(paper_id: int, db: DBSession, _: AdminUser, __: CSRFProtected):
-    from ..models import PaperDraft, ProcessingJob, PublicationVersion
+    from ..models import PaperDraft, ProcessingJob, PublicationVersion, SourceFile, Asset
     paper = db.get(Paper, paper_id)
     if not paper:
         raise HTTPException(status_code=404, detail="未找到")
-    # 删除关联源文件
+    # 删除关联源文件（存储）
     from ..storage import get_storage
     from ..config import settings
     storage = get_storage()
@@ -64,10 +64,13 @@ async def delete_paper(paper_id: int, db: DBSession, _: AdminUser, __: CSRFProte
             storage.delete(settings.source_files_namespace, paper.source_file.storage_key)
         except Exception:
             pass
-    # 手动级联删除关联记录
+    # 删除关联资产
+    db.query(Asset).filter(Asset.paper_id == paper_id).delete()
+    # 手动级联删除关联记录（按依赖顺序）
+    db.query(PublicationVersion).filter(PublicationVersion.paper_id == paper_id).delete()
     db.query(PaperDraft).filter(PaperDraft.paper_id == paper_id).delete()
     db.query(ProcessingJob).filter(ProcessingJob.paper_id == paper_id).delete()
-    db.query(PublicationVersion).filter(PublicationVersion.paper_id == paper_id).delete()
+    db.query(SourceFile).filter(SourceFile.paper_id == paper_id).delete()
     db.delete(paper)
     db.commit()
 

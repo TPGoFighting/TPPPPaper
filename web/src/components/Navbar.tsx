@@ -139,9 +139,20 @@ function SidebarContent({
 
       {/* 底部用户区 */}
       <div className="px-3 py-4 border-t border-[var(--color-border-light)]">
-        <Link
-          href="/login"
-          onClick={onNavigate}
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+              });
+            } catch {
+              // ignore
+            }
+            window.location.href = '/login';
+          }}
           className="inline-flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-[var(--radius-sm)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors w-full"
         >
           <svg
@@ -159,7 +170,7 @@ function SidebarContent({
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
           退出登录
-        </Link>
+        </button>
       </div>
     </div>
   );

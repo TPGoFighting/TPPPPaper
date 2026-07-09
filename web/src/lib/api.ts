@@ -114,11 +114,6 @@ class ApiClientError extends Error implements ApiError {
   }
 }
 
-function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem('tpaper_token');
-}
-
 interface FetchOptions extends RequestInit {
   auth?: boolean;
 }
@@ -137,39 +132,62 @@ async function request<T>(
     headers['X-Requested-With'] = 'XMLHttpRequest';
   }
 
-  if (auth) {
-    const token = getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  }
+  const maxRetries = 2;
+  let lastError: ApiClientError | null = null;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...rest,
-    credentials: 'include',
-    headers,
-  });
-
-  if (!res.ok) {
-    let details: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      details = await res.json();
-    } catch {
-      // 响应非 JSON
+      const res = await fetch(`${BASE_URL}${path}`, {
+        ...rest,
+        credentials: 'include',
+        headers,
+      });
+
+      if (!res.ok) {
+        let details: unknown;
+        try {
+          details = await res.json();
+        } catch {
+          // 响应非 JSON
+        }
+        const err = new ApiClientError(
+          `请求失败: ${res.status} ${res.statusText}`,
+          res.status,
+          details
+        );
+        // 仅对 5xx 错误重试
+        if (res.status >= 500 && attempt < maxRetries) {
+          lastError = err;
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+          continue;
+        }
+        throw err;
+      }
+
+      // 处理无内容响应
+      if (res.status === 204) {
+        return undefined as T;
+      }
+
+      return res.json() as Promise<T>;
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        throw err;
+      }
+      // 网络错误重试
+      if (attempt < maxRetries) {
+        lastError = new ApiClientError(
+          `网络错误: ${err instanceof Error ? err.message : '未知'}`,
+          0
+        );
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
+      throw lastError || new ApiClientError('网络错误', 0);
     }
-    throw new ApiClientError(
-      `请求失败: ${res.status} ${res.statusText}`,
-      res.status,
-      details
-    );
   }
 
-  // 处理无内容响应
-  if (res.status === 204) {
-    return undefined as T;
-  }
-
-  return res.json() as Promise<T>;
+  throw lastError || new ApiClientError('请求失败', 0);
 }
 
 export const api = {
@@ -201,13 +219,6 @@ export const api = {
       'X-Requested-With': 'XMLHttpRequest',
       ...(customHeaders as Record<string, string>),
     };
-
-    if (auth) {
-      const token = getToken();
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-    }
 
     const res = await fetch(`${BASE_URL}${path}`, {
       ...rest,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { api } from '@/lib/api';
 
 interface PublicPaper {
   slug: string;
@@ -22,13 +23,8 @@ export default function PublicPaperPage() {
   useEffect(() => {
     async function loadPublicPaper() {
       try {
-        const res = await fetch(`/api/public/papers/${params.slug}`, {
-          credentials: 'include',
-        });
-        if (!res.ok) {
-          throw new Error('页面不可用或已撤回');
-        }
-        setPaper(await res.json());
+        const data = await api.get<PublicPaper>(`/public/papers/${params.slug}`, { auth: false });
+        setPaper(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : '页面加载失败');
       } finally {
