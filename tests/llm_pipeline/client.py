@@ -10,9 +10,26 @@ import time
 import urllib.request
 from typing import Optional
 
-API_URL = "https://api.longcat.chat/anthropic/v1/messages"
-API_KEY = os.environ.get("LONGCAT_API_KEY")
-MODEL = "LongCat-2.0"
+PROVIDER = os.environ.get(
+    "LLM_PROVIDER",
+    "deepseek" if os.environ.get("DEEPSEEK_API_KEY") else "longcat",
+).lower()
+
+if PROVIDER == "deepseek":
+    # DeepSeek 的 Anthropic 兼容 base_url 是 https://api.deepseek.com/anthropic。
+    API_URL = os.environ.get(
+        "LLM_API_URL", "https://api.deepseek.com/anthropic/v1/messages"
+    )
+    API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("DEEPSEEK_API_KEY")
+    MODEL = os.environ.get("LLM_MODEL", "deepseek-v4-flash")
+elif PROVIDER == "longcat":
+    API_URL = os.environ.get(
+        "LLM_API_URL", "https://api.longcat.chat/anthropic/v1/messages"
+    )
+    API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("LONGCAT_API_KEY")
+    MODEL = os.environ.get("LLM_MODEL", "LongCat-2.0")
+else:
+    raise ValueError("LLM_PROVIDER 仅支持 deepseek 或 longcat")
 
 logger = logging.getLogger("tier2.client")
 
@@ -24,12 +41,14 @@ def chat(
     temperature: float = 0.2,
     system: Optional[str] = None,
 ) -> str:
-    """调用 LongCat（Anthropic 兼容接口），返回文本内容。
+    """调用配置的 Anthropic 兼容 LLM，返回文本内容。
 
     messages: [{"role": "user"|"assistant", "content": str}, ...]
     """
     if not API_KEY:
-        raise RuntimeError("请设置 LONGCAT_API_KEY 环境变量后再调用 LongCat")
+        raise RuntimeError(
+            "请设置 LLM_API_KEY，或为当前服务设置 DEEPSEEK_API_KEY / LONGCAT_API_KEY"
+        )
     payload = {
         "model": MODEL,
         "max_tokens": max_tokens,
