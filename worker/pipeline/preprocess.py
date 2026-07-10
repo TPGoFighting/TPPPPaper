@@ -10,27 +10,27 @@ logger = logging.getLogger("tpaper.pipeline.preprocess")
 
 
 def preprocess_pdf(content: bytes) -> dict:
-    """PDF 预处理：提取文本，文本不足时并行 Tesseract OCR。"""
+    """PDF 预处理：提取文本，文本不足时截图进入多模态识别。"""
     extracted_pages = []
     try:
-        from pypdf import PdfReader
-        import io
-        reader = PdfReader(io.BytesIO(content))
-        for i, page in enumerate(reader.pages):
-            text = page.extract_text() or ""
+        import fitz  # pymupdf
+        doc = fitz.open(stream=content, filetype="pdf")
+        for i, page in enumerate(doc):
+            text = page.get_text() or ""
             extracted_pages.append({
                 "page": i + 1,
                 "text": text,
                 "needs_multimodal": len(text.strip()) < 50,
             })
+        doc.close()
     except ImportError:
-        logger.warning("pypdf 未安装，PDF 文本提取不可用")
+        logger.warning("pymupdf 未安装，PDF 文本提取不可用")
         extracted_pages = [{"page": 1, "text": "", "needs_multimodal": True}]
     except Exception as e:
         logger.error(f"PDF 解析失败: {e}")
         extracted_pages = [{"page": 1, "text": "", "needs_multimodal": True, "error": str(e)}]
 
-    # 对需要多模态的页面，并行 Tesseract OCR 提取文字
+    # 对需要 OCR 的页面，并行 Tesseract OCR 提取文字
     needs_ocr = [p for p in extracted_pages if p.get("needs_multimodal") and not p.get("text", "").strip()]
     if needs_ocr:
         try:
@@ -42,6 +42,13 @@ def preprocess_pdf(content: bytes) -> dict:
             doc = fitz.open(stream=content, filetype="pdf")
             mat = fitz.Matrix(2, 2)
 
+            def _preprocess_image(img: "Image.Image") -> "Image.Image":
+                """灰度化 + 二值化，提升 OCR 准确率。"""
+                img = img.convert("L")  # 灰度
+                # 自适应阈值二值化
+                img = img.point(lambda p: 0 if p < 140 else 255)
+                return img
+
             def _ocr_page(page_info: dict) -> dict:
                 page_idx = page_info["page"] - 1
                 if page_idx < 0 or page_idx >= len(doc):
@@ -50,7 +57,10 @@ def preprocess_pdf(content: bytes) -> dict:
                 pix = page.get_pixmap(matrix=mat)
                 img_bytes = pix.tobytes("png")
                 img = Image.open(_io.BytesIO(img_bytes))
-                ocr_text = pytesseract.image_to_string(img, lang="chi_sim+chi_tra+eng")
+                ocr_img = _preprocess_image(img)
+                ocr_text = pytesseract.image_to_string(
+                    ocr_img, lang="chi_sim+eng", config="--psm 6"
+                )
                 if ocr_text.strip():
                     page_info["text"] = ocr_text.strip()
                     page_info["needs_multimodal"] = False

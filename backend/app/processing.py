@@ -5,6 +5,12 @@
 
 从 worker/main.py 提取处理逻辑，改为使用相对导入，
 并通过 process_queued_papers() 轮询数据库处理排队论文。
+
+v2 优化：
+- 使用 PyMuPDF 替代 pypdf
+- 支持多模态LLM直接读图
+- 按内容边界分块 + 滑动窗口
+- 合并提取+生成为单阶段
 """
 import asyncio
 import base64
@@ -542,6 +548,417 @@ async def process_paper(paper_id: int, source_file_id: int) -> None:
         db.close()
 
 
+# ── v2 优化处理流程 ──
+
+def _preprocess_pdf_v2(content: bytes, use_vision: bool = True) -> dict:
+    """PDF 预处理 v2：PyMuPDF 提取 + 多模态LLM识别扫描件。"""
+    import fitz  # PyMuPDF
+    
+    doc = fitz.open(stream=content, filetype="pdf")
+    pages = []
+    
+    for i, page in enumerate(doc):
+        page_num = i + 1
+        
+        # 提取文本（保留布局）
+        text = page.get_text("text")
+        
+        # 提取表格
+        tables = []
+        try:
+            tab_finder = page.find_tables()
+            for tab in tab_finder.tables:
+                tables.append({
+                    "rows": tab.extract(),
+                    "bbox": tab.bbox
+                })
+        except Exception as e:
+            logger.debug(f"第 {page_num} 页表格提取失败: {e}")
+        
+        # 提取图片数量
+        images = page.get_images()
+        
+        # 判断是否需要多模态处理
+        needs_multimodal = len(text.strip()) < 50 or len(images) > 0
+        
+        # 如果需要多模态，将页面渲染为图片
+        image_b64 = None
+        if needs_multimodal and use_vision:
+            mat = fitz.Matrix(2, 2)  # 2倍放大
+            pix = page.get_pixmap(matrix=mat)
+            img_bytes = pix.tobytes("png")
+            image_b64 = base64.b64encode(img_bytes).decode()
+        
+        pages.append({
+            "page": page_num,
+            "text": text,
+            "tables": tables,
+            "image_count": len(images),
+            "needs_multimodal": needs_multimodal,
+            "image_b64": image_b64,
+            "mime": "image/png" if image_b64 else None,
+        })
+    
+    doc.close()
+    return {"pages": pages, "page_count": len(pages)}
+
+
+def _split_by_content_boundaries(pages: list[dict]) -> list[dict]:
+    """按内容边界分块，保留跨页题目的完整性。"""
+    import re
+    
+    chunks = []
+    current_chunk = {
+        "pages": [],
+        "text": "",
+        "start_page": 1,
+        "end_page": 1,
+    }
+    
+    for page in pages:
+        text = page["text"]
+        
+        # 检测内容边界（题目结束标记）
+        if current_chunk["text"] and _is_question_end(text):
+            # 保存当前块
+            current_chunk["end_page"] = page["page"] - 1
+            chunks.append(current_chunk)
+            current_chunk = {
+                "pages": [],
+                "text": "",
+                "start_page": page["page"],
+                "end_page": page["page"],
+            }
+        
+        current_chunk["pages"].append(page)
+        current_chunk["text"] += f"\n--- 第{page['page']}页 ---\n" + text
+        current_chunk["end_page"] = page["page"]
+    
+    # 处理最后一个块
+    if current_chunk["pages"]:
+        chunks.append(current_chunk)
+    
+    return chunks
+
+
+def _is_question_end(text: str) -> bool:
+    """检测题目结束标记"""
+    import re
+    
+    patterns = [
+        r'^\d+[.、．]\s*',  # 题号：1. 2. 3.
+        r'^[一二三四五六七八九十]+[、．]\s*',  # 中文题号
+        r'^第\d+题',  # 第1题
+        r'^[（(]\d+[)）]',  # (1) (2)
+        r'答案[：:]',  # 答案：
+        r'解析[：:]',  # 解析：
+    ]
+    
+    lines = text.strip().split('\n')
+    if lines:
+        first_line = lines[0].strip()
+        return any(re.search(p, first_line) for p in patterns)
+    
+    return False
+
+
+def _split_with_overlap(pages: list[dict], window_size: int = 200) -> list[dict]:
+    """带滑动窗口的分块，保留跨页上下文。"""
+    chunks = _split_by_content_boundaries(pages)
+    
+    # 添加前后重叠窗口
+    enhanced_chunks = []
+    
+    for i, chunk in enumerate(chunks):
+        chunk_text = chunk["text"]
+        
+        # 添加前置窗口（前一块的末尾）
+        if i > 0:
+            prev_text = chunks[i-1]["text"]
+            overlap_start = max(0, len(prev_text) - window_size)
+            prefix = prev_text[overlap_start:]
+            chunk_text = f"[上文]\n{prefix}\n\n[当前]\n{chunk_text}"
+        
+        # 添加后置窗口（后一块的开头）
+        if i < len(chunks) - 1:
+            next_text = chunks[i+1]["text"]
+            overlap_end = min(len(next_text), window_size)
+            suffix = next_text[:overlap_end]
+            chunk_text = f"{chunk_text}\n\n[下文]\n{suffix}"
+        
+        enhanced_chunks.append({
+            "text": chunk_text,
+            "start_page": chunk["start_page"],
+            "end_page": chunk["end_page"],
+            "page_count": chunk["end_page"] - chunk["start_page"] + 1,
+        })
+    
+    return enhanced_chunks
+
+
+SINGLE_STAGE_SYSTEM = """你是试卷结构化助手。请从原始内容中直接提取并生成结构化的试卷文档。
+
+输出 JSON 必须符合以下 Schema：
+{
+  "title": "试卷标题",
+  "questions": [
+    {
+      "number": 1,
+      "type": "single_choice | multi_choice | true_false | fill_blank | subjective",
+      "stem": "题干文本",
+      "options": [{"key": "A", "text": "选项内容"}],
+      "correct_keys": ["A"],
+      "reference_answer": "参考答案",
+      "explanation": "解析",
+      "knowledge_points": ["知识点"]
+    }
+  ]
+}
+
+重要规则：
+1. 必须忠实原文，不得补充或修改答案
+2. 跨页题目要完整提取，不要切断
+3. 保留表格、列表等结构
+4. 如果有图片，提取图片中的文字内容
+5. 返回纯 JSON，不要包含任何 markdown 标记"""
+
+
+async def _extract_and_generate_single_stage(
+    adapter: OpenAICompatibleAdapter, chunks: list[dict], progress_callback=None
+) -> dict:
+    """单阶段提取+生成：从预处理内容直接生成 PaperDocument。"""
+    all_questions = []
+    total_chunks = len(chunks)
+    
+    for i, chunk in enumerate(chunks):
+        if progress_callback:
+            progress_callback(
+                f"处理文档块 {i + 1}/{total_chunks}",
+                int((i / total_chunks) * 100)
+            )
+        
+        # 检查是否有图片需要处理
+        has_images = any(p.get("image_b64") for p in chunk.get("pages", []))
+        
+        if has_images:
+            # 多模态处理：将图片发送给 LLM
+            content_parts = []
+            content_parts.append({
+                "type": "text",
+                "text": f"请从以下内容中提取试卷结构：\n\n{chunk['text']}"
+            })
+            
+            for page in chunk.get("pages", []):
+                if page.get("image_b64"):
+                    content_parts.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{page['mime']};base64,{page['image_b64']}"
+                        }
+                    })
+            
+            messages = [
+                {"role": "system", "content": SINGLE_STAGE_SYSTEM},
+                {"role": "user", "content": content_parts}
+            ]
+        else:
+            # 纯文本处理
+            messages = [
+                {"role": "system", "content": SINGLE_STAGE_SYSTEM},
+                {"role": "user", "content": f"请从以下内容中提取试卷结构：\n\n{chunk['text']}"}
+            ]
+        
+        try:
+            response = await adapter.chat(messages, response_format_json=True)
+            result = json.loads(response.content)
+            
+            # 提取问题
+            questions = result.get("questions", [])
+            for q in questions:
+                q["number"] = len(all_questions) + 1
+                all_questions.append(q)
+            
+            logger.info(f"块 {i + 1}: 提取 {len(questions)} 道题")
+        except Exception as e:
+            logger.error(f"块 {i + 1} 处理失败: {e}")
+            # 继续处理下一块
+            continue
+    
+    # 构建最终的 PaperDocument
+    document = {
+        "title": "提取的试卷",
+        "sections": [],
+        "questions": all_questions,
+    }
+    
+    return document
+
+
+async def process_paper_v2(paper_id: int, source_file_id: int) -> None:
+    """处理一份资料的完整流水线 v2：优化后的流程。"""
+    db = SessionLocal()
+    try:
+        paper = db.get(Paper, paper_id)
+        source = db.get(SourceFile, source_file_id)
+        if not paper or not source:
+            logger.error(f"Paper {paper_id} 或 SourceFile {source_file_id} 不存在")
+            return
+
+        # 获取活跃模型 Profile
+        profile = db.query(ModelProfile).filter(ModelProfile.is_active.is_(True)).first()
+        text_adapter = None
+        vision_adapter = None
+        if profile:
+            api_key = decrypt_secret(profile.encrypted_api_key) if profile.encrypted_api_key else ""
+            text_adapter = OpenAICompatibleAdapter(
+                base_url=profile.base_url,
+                api_key=api_key,
+                model=profile.text_model,
+                timeout=profile.timeout_seconds,
+                allow_private_network=profile.allow_private_network,
+            )
+            vision_adapter = OpenAICompatibleAdapter(
+                base_url=profile.base_url,
+                api_key=api_key,
+                model=profile.multimodal_model,
+                timeout=profile.timeout_seconds,
+                allow_private_network=profile.allow_private_network,
+            )
+
+        # 创建任务记录
+        job = ProcessingJob(
+            paper_id=paper_id,
+            model_profile_id=profile.id if profile else None,
+            job_type="parse",
+            status="running",
+            stage="preprocessing",
+            idempotency_key=f"paper-{paper_id}-parse-v2",
+        )
+        db.add(job)
+        paper.status = "parsing"
+        db.commit()
+
+        # 阶段 1：预处理 v2（PyMuPDF）
+        logger.info(f"[Paper {paper_id}] 预处理 v2...")
+        storage = get_storage()
+        content = storage.get(settings.source_files_namespace, source.storage_key)
+        
+        if source.mime_type == "application/pdf":
+            preprocessed = _preprocess_pdf_v2(content, use_vision=True)
+        else:
+            # 使用原有的预处理逻辑
+            preprocessed = preprocess(source)
+        
+        job.total_pages = preprocessed["page_count"]
+        job.stage = "extracting"
+        source.page_count = preprocessed["page_count"]
+        db.commit()
+
+        if text_adapter:
+            try:
+                # 阶段 2：按内容边界分块
+                logger.info(f"[Paper {paper_id}] 按内容边界分块...")
+                pages = preprocessed.get("pages", [])
+                chunks = _split_with_overlap(pages, window_size=200)
+                logger.info(f"[Paper {paper_id}] 分块完成: {len(chunks)} 块")
+                
+                # 阶段 3：单阶段提取+生成
+                logger.info(f"[Paper {paper_id}] 单阶段提取+生成...")
+                paper.status = "modeling"
+                db.commit()
+                
+                def progress_callback(message, progress):
+                    job.stage = f"extracting ({message})"
+                    job.progress = progress
+                    db.commit()
+                
+                document = await _extract_and_generate_single_stage(
+                    text_adapter, chunks, progress_callback
+                )
+                
+                job.stage = "generating_document"
+                job.current_page = preprocessed["page_count"]
+                db.commit()
+                
+            except Exception as model_error:
+                logger.warning(f"[Paper {paper_id}] 模型生成失败，改用本地兜底: {model_error}")
+                document = build_fallback_document(paper.title, preprocessed, paper.mode)
+                job.error_code = type(model_error).__name__
+                job.error_message = str(model_error)[:500]
+        else:
+            logger.warning(f"[Paper {paper_id}] 未配置模型 Profile，使用本地兜底")
+            job.stage = "generating_document"
+            job.current_page = preprocessed["page_count"]
+            db.commit()
+            document = build_fallback_document(paper.title, preprocessed, paper.mode)
+
+        # 阶段 4：网页生成
+        job.stage = "generating_presentation"
+        db.commit()
+        logger.info(f"[Paper {paper_id}] 生成网页...")
+        document = ensure_publishable_document(document)
+        html, css = await stage3_generate_presentation(text_adapter, document)
+
+        # 阶段 5：净化
+        job.stage = "sanitizing"
+        db.commit()
+        clean_html, _ = sanitize_html(html)
+        clean_css, _ = sanitize_css(css, scope_selector="")
+        validation_errors: list[str] = []
+        try:
+            from .schemas import PaperDocument
+            validation_errors = PaperDocument.model_validate(document).semantic_validate()
+        except Exception as e:
+            validation_errors = [f"文档结构错误: {e}"]
+        is_valid = len(validation_errors) == 0
+
+        last_draft = (
+            db.query(PaperDraft)
+            .filter(PaperDraft.paper_id == paper_id)
+            .order_by(PaperDraft.version.desc())
+            .first()
+        )
+        next_draft_version = (last_draft.version + 1) if last_draft else 1
+
+        # 创建草稿
+        draft = PaperDraft(
+            paper_id=paper_id,
+            version=next_draft_version,
+            document=document,
+            presentation_html=clean_html,
+            theme_css=clean_css,
+            is_valid=is_valid,
+            validation_result={"errors": validation_errors, "is_valid": is_valid},
+        )
+        db.add(draft)
+        db.flush()
+
+        paper.current_draft_id = draft.id
+        paper.status = "pending_review"
+        job.status = "succeeded"
+        job.stage = "done"
+        job.call_summary = {
+            "model": profile.text_model if profile else "local_fallback",
+            "pages_processed": preprocessed["page_count"],
+            "chunks_processed": len(chunks) if 'chunks' in locals() else 0,
+        }
+        db.commit()
+        logger.info(f"[Paper {paper_id}] 处理完成，进入待审核")
+
+    except Exception as e:
+        logger.exception(f"[Paper {paper_id}] 处理失败")
+        paper = db.get(Paper, paper_id)
+        if paper:
+            paper.status = "failed"
+        if 'job' in locals():
+            job.status = "failed"
+            job.error_code = type(e).__name__
+            job.error_message = str(e)[:500]
+        db.commit()
+    finally:
+        db.close()
+
+
 # ── 轮询处理（本地开发模式，无需 Redis）──
 
 async def process_queued_papers() -> None:
@@ -553,7 +970,8 @@ async def process_queued_papers() -> None:
             queued = db.query(Paper).filter(Paper.status == "queued").all()
             for paper in queued:
                 if paper.source_file_id:
-                    await process_paper(paper.id, paper.source_file_id)
+                    # 优先使用 v2 流程
+                    await process_paper_v2(paper.id, paper.source_file_id)
         except Exception as e:
             logger.error(f"轮询处理异常: {e}")
         finally:
