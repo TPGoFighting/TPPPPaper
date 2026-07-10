@@ -25,9 +25,10 @@ def preprocess_pdf(content: bytes) -> dict:
     if need_ocr:
         logger.info(f"Tier 1b: 对 {len(need_ocr)} 个低文本页做 OCR")
         ocr_pages = _ocr_pages(content, need_ocr)
-        for p in ocr_pages:
-            if p.get("text", "").strip():
-                engine = "ocr"
+        # 只有 OCR 实际渲染并写回页面时才标记为 ocr；低文本页原本残留的
+        # 少量文本不能说明 OCR 已成功，避免依赖缺失时产生误导性日志。
+        if any(p.get("image_b64") for p in ocr_pages):
+            engine = "ocr"
         still_empty = [p for p in ocr_pages if not p.get("text", "").strip()]
         if still_empty:
             # Tier 1c: 视觉兜底（需视觉模型，当前部署跳过）
