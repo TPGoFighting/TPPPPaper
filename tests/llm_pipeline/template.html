@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$',right:'$',display:false},{left:'$$',right:'$$',display:true}],ignoredTags:['script','noscript','style']})"></script>
+<style>
+:root{
+  --ink:#0a0a0a; --paper:#fafafa; --card:#ffffff; --muted:#8a8a8f;
+  --line:#ececec; --red:#ff3b30; --yellow:#ffd60a; --blue:#0a84ff;
+  --green:#34c759; --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 30px rgba(0,0,0,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","Noto Sans SC",sans-serif;
+  background:var(--paper);color:var(--ink);line-height:1.7;
+  cursor:none; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+/* ── 自定义鼠标 ── */
+#cursor{position:fixed;top:0;left:0;width:12px;height:12px;border-radius:50%;
+  background:var(--ink);mix-blend-mode:difference;pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);transition:width .2s,height .2s,background .2s;}
+#cursor.ring{width:42px;height:42px;background:transparent;border:1.5px solid #fff;mix-blend-mode:difference;}
+#cursor-label{position:fixed;top:0;left:0;color:#fff;font-size:11px;font-weight:600;
+  pointer-events:none;z-index:9999;transform:translate(-50%,-50%);opacity:0;transition:opacity .15s;mix-blend-mode:difference;}
+a,button,input,.opt,.toggle,.blank{cursor:none}
+/* ── 进度条 ── */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:200;
+  background:linear-gradient(90deg,var(--blue),var(--yellow),var(--red));transition:width .1s linear;}
+/* ── HERO ── */
+.hero{background:var(--ink);color:#fff;padding:90px 24px 70px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;
+  background:radial-gradient(60% 50% at 50% 0%,rgba(10,132,255,.25),transparent 70%),
+             radial-gradient(50% 50% at 90% 100%,rgba(255,214,10,.18),transparent 70%),
+             radial-gradient(50% 50% at 10% 90%,rgba(255,59,48,.18),transparent 70%);}
+.hero>*{position:relative}
+.hero .kicker{display:inline-block;font-size:12px;letter-spacing:3px;text-transform:uppercase;
+  color:#888;margin-bottom:18px;border:1px solid #333;padding:6px 16px;border-radius:100px}
+.hero h1{font-size:clamp(30px,6vw,56px);font-weight:800;letter-spacing:-1px;line-height:1.1}
+.hero .meta{margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.hero .meta span{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  padding:7px 16px;border-radius:100px;font-size:13px;color:#bbb}
+/* ── 实时统计 ── */
+#stats{position:sticky;top:3px;z-index:150;display:flex;justify-content:center;gap:24px;
+  padding:14px;background:rgba(250,250,250,.8);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+#stats b{color:var(--ink);font-weight:700;font-size:15px}
+#stats .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+/* ── 容器 ── */
+.wrap{max-width:760px;margin:0 auto;padding:36px 18px 90px}
+.section{margin:42px 0;opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
+.section.in{opacity:1;transform:none}
+.sec-head{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.sec-ico{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  font-weight:800;color:#fff;font-size:15px}
+.sec-title{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.sec-title small{font-weight:500;color:var(--muted);font-size:13px;margin-left:8px}
+/* ── 题目卡片 ── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;
+  margin-bottom:14px;box-shadow:var(--shadow);transition:border-color .25s,transform .25s}
+.card:hover{transform:translateY(-2px)}
+.q-top{display:flex;align-items:flex-start;gap:12px}
+.q-num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.q-body{flex:1}
+.q-type{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;margin-bottom:8px}
+.t-single{background:#e8f1ff;color:var(--blue)} .t-multi{background:#fff3d6;color:#b07a00}
+.t-true{background:#eafaf0;color:var(--green)} .t-fill{background:#fff0f0;color:var(--red)}
+.t-sub{background:#f0eaff;color:#7a3cff}
+.q-stem{font-size:16px;font-weight:600;line-height:1.6}
+/* ── 选项 ── */
+.opts{margin:14px 0 4px}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;margin:7px 0;border-radius:12px;
+  border:1px solid var(--line);transition:all .18s;position:relative}
+.opt:hover{border-color:#c9c9c9;background:#fcfcfc}
+.opt .k{flex:none;width:26px;height:26px;border-radius:8px;background:#f2f2f2;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;transition:all .18s}
+.opt .t{flex:1;font-size:15px}
+.opt.correct{border-color:var(--green);background:#eafaf0}
+.opt.correct .k{background:var(--green);color:#fff}
+.opt.wrong{border-color:var(--red);background:#fff0f0}
+.opt.wrong .k{background:var(--red);color:#fff}
+.opt.dim{opacity:.4}
+.opt .mark{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-weight:800;font-size:18px;opacity:0;transition:opacity .2s}
+.opt.correct .mark{color:var(--green);opacity:1;content:"✓"}
+.opt.wrong .mark{color:var(--red);opacity:1;content:"✕"}
+/* ── 填空 ── */
+.blank-row{display:flex;gap:10px;align-items:center;margin:14px 0 4px;flex-wrap:wrap}
+.blank{border:2px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;
+  min-width:240px;flex:1;transition:all .2s;background:#fff;color:var(--ink);outline:none}
+.blank:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(10,132,255,.12)}
+.blank.ok{border-color:var(--green);background:#eafaf0}
+.blank.no{border-color:var(--red);background:#fff0f0}
+.blank-hint{font-size:12px;color:var(--muted)}
+/* ── 解析 ── */
+.toggle{margin-top:14px;display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;
+  color:var(--ink);background:#f2f2f2;border:none;padding:9px 16px;border-radius:100px;transition:all .2s}
+.toggle:hover{background:#e8e8e8}
+.toggle svg{width:14px;height:14px;transition:transform .3s}
+.toggle.on svg{transform:rotate(180deg)}
+.ans{max-height:0;overflow:hidden;opacity:0;transition:max-height .5s ease,opacity .35s,margin .35s}
+.ans.open{max-height:1200px;opacity:1;margin-top:14px}
+.ans-box{background:#fbfbfb;border:1px solid var(--line);border-left:3px solid var(--blue);
+  border-radius:12px;padding:16px;font-size:14px;line-height:1.85}
+.ans-box .lbl{display:inline-block;font-weight:800;color:var(--blue);margin:10px 0 6px;font-size:12px;letter-spacing:.5px}
+.ans-box .lbl:first-child{margin-top:0}
+.ans-box .lbl.ans{color:var(--green)} .ans-box .lbl.sol{color:var(--ink)}
+.ans-box .blk{white-space:pre-wrap;word-break:break-word}
+.ans-box .blk.ans{background:#eafaf0;border:1px solid #cdeccd;border-radius:10px;padding:12px 14px;color:#1a7a32;font-weight:600}
+.ans-ans{margin-bottom:10px}
+.kp{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.kp span{font-size:11px;font-weight:600;padding:4px 11px;border-radius:100px;background:var(--ink);color:#fff}
+/* ── 结语 ── */
+.foot{text-align:center;padding:40px 0 10px;color:var(--muted);font-size:13px}
+.float-btn{position:fixed;right:22px;bottom:22px;width:48px;height:48px;border-radius:50%;background:var(--ink);
+  color:#fff;border:none;display:flex;align-items:center;justify-content:center;z-index:160;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<div id="cursor"></div><div id="cursor-label"></div>
+<div id="progress"></div>
+
+<header class="hero">
+  <span class="kicker">TPaper · AI 出题</span>
+  <h1>{{TITLE}}</h1>
+  <div class="meta">
+    <span>共 {{COUNT}} 题</span><span>实时判分</span><span>详细解析</span>
+  </div>
+</header>
+
+<div id="stats">
+  <span><span class="dot" style="background:var(--green)"></span>已作答 <b id="nDone">0</b>/{{COUNT}}</span>
+  <span><span class="dot" style="background:var(--blue)"></span>正确 <b id="nRight">0</b></span>
+  <span><span class="dot" style="background:var(--red)"></span>错误 <b id="nWrong">0</b></span>
+</div>
+
+<main class="wrap" id="paper">{{QUESTIONS_HTML}}</main>
+
+<button class="float-btn" id="top" aria-label="回到顶部">↑</button>
+
+<script>
+/* ── 自定义鼠标 ── */
+const cur=document.getElementById('cursor'),lbl=document.getElementById('cursor-label');
+let cx=0,cy=0,tx=0,ty=0;
+addEventListener('mousemove',e=>{tx=e.clientX;ty=e.clientY;lbl.style.left=tx+'px';lbl.style.top=ty+'px';});
+addEventListener('mouseover',e=>{const t=e.target.closest('a,button,input,.opt,.toggle,.blank');
+  if(t){cur.classList.add('ring');lbl.style.opacity=1;lbl.textContent=t.classList.contains('opt')?'选':t.classList.contains('blank')?'填':'看';}});
+addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,.opt,.toggle,.blank')){cur.classList.remove('ring');lbl.style.opacity=0;}});
+(function loop(){cx+=(tx-cx)*.22;cy+=(ty-cy)*.22;cur.style.left=cx+'px';cur.style.top=cy+'px';requestAnimationFrame(loop);})();
+
+/* ── 进度条 + 统计 ── */
+const prog=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;
+  prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';});
+
+/* ── 滚动揭示 ── */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');}),{threshold:.08});
+document.querySelectorAll('.section').forEach(s=>io.observe(s));
+
+/* ── 数据统计 ── */
+let done=0,right=0,wrong=0;
+function upd(){document.getElementById('nDone').textContent=done;
+  document.getElementById('nRight').textContent=right;document.getElementById('nWrong').textContent=wrong;}
+
+/* ── 选择题 ── */
+document.querySelectorAll('.card[data-type="single_choice"],.card[data-type="multi_choice"]').forEach(card=>{
+  const correct=(card.dataset.correct||'').split(',').filter(Boolean);
+  const opts=card.querySelectorAll('.opt');const multi=correct.length>1;
+  opts.forEach(o=>o.addEventListener('click',()=>{
+    const k=o.dataset.k;const isC=correct.includes(k);
+    if(multi){o.classList.toggle('correct',isC&&!o.classList.contains('correct'));
+      o.classList.toggle('wrong',!isC&&o.classList.contains('correct')===false&&o.classList.contains('wrong')===false);
+      if(!isC)o.classList.add('wrong');}
+    else{opts.forEach(x=>x.classList.remove('correct','wrong','dim'));
+      o.classList.add(isC?'correct':'wrong');opts.forEach(x=>{if(x!==o&&!x.classList.contains('correct'))x.classList.add('dim');});}
+    // 统计
+    const chosen=[...opts].filter(x=>x.classList.contains('correct')||x.classList.contains('wrong')).length;
+    if(!card._counted && chosen){done++;card._counted=true;}
+    const allCorrect=[...opts].filter(x=>x.classList.contains('correct')).length===correct.length &&
+      [...opts].filter(x=>x.classList.contains('wrong')).length===0 && chosen>0;
+    if(card._counted){if(allCorrect)right++;else wrong++;}
+    upd();
+  }));
+});
+/* ── 判断 ── */
+document.querySelectorAll('.card[data-type="true_false"]').forEach(card=>{
+  const correct=card.dataset.correct||'T';
+  card.querySelectorAll('.opt').forEach(o=>o.addEventListener('click',()=>{
+    card.querySelectorAll('.opt').forEach(x=>x.classList.remove('correct','wrong','dim'));
+    const isC=o.dataset.k===correct;o.classList.add(isC?'correct':'wrong');
+    card.querySelectorAll('.opt').forEach(x=>{if(x!==o)x.classList.add('dim');});
+    if(!card._counted){done++;card._counted=true;if(isC)right++;else wrong++;upd();}
+  }));
+});
+/* ── 填空 ── */
+document.querySelectorAll('.card[data-type="fill_blank"]').forEach(card=>{
+  const ans=(card.dataset.correct||'').toLowerCase().split('|').map(s=>s.trim()).filter(Boolean);
+  const inp=card.querySelector('.blank');
+  function check(){const v=inp.value.trim().toLowerCase();if(!v)return;
+    const ok=ans.includes(v)||ans.some(a=>a&&v.includes(a)&&v.length>=a.length);
+    inp.classList.remove('ok','no');inp.classList.add(ok?'ok':'no');
+    if(!card._counted){done++;card._counted=true;if(ok)right++;else wrong++;upd();}}
+  inp.addEventListener('blur',check);inp.addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+});
+/* ── 解析展开 ── */
+document.querySelectorAll('.toggle').forEach(b=>b.addEventListener('click',()=>{
+  const a=b.nextElementSibling;a.classList.toggle('open');b.classList.toggle('on');}));
+/* ── 回到顶部 ── */
+document.getElementById('top').addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+</script>
+</body>
+</html>

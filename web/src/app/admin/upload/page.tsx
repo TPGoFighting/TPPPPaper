@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, ApiClientError } from '@/lib/api';
 
 type UploadMode = 'faithful' | 'lecture';
 
@@ -49,7 +49,33 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append('file', file.raw);
       const apiMode = mode === 'faithful' ? 'faithful_transcription' : 'lecture_to_quiz';
-      const result = await api.upload<{ paper_id: number }>('/uploads/file?mode=' + apiMode, formData);
+
+      // 大文件（>5MB）直传 API，绕过 Cloudflare 100s 超时限制
+      const DIRECT_API_THRESHOLD = 5 * 1024 * 1024;
+      const DIRECT_API_URL = process.env.NEXT_PUBLIC_DIRECT_API_URL ?? '';
+
+      let result: { paper_id: number };
+
+      if (file.size > DIRECT_API_THRESHOLD && DIRECT_API_URL) {
+        const res = await fetch(`${DIRECT_API_URL}/api/uploads/file?mode=${apiMode}`, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        if (!res.ok) {
+          const details = await res.json().catch(() => ({}));
+          throw new ApiClientError(
+            `直传失败: ${res.status} ${res.statusText}`,
+            res.status,
+            details
+          );
+        }
+        result = await res.json();
+      } else {
+        result = await api.upload<{ paper_id: number }>('/uploads/file?mode=' + apiMode, formData);
+      }
+
       setUploading(false);
       router.push(`/admin/papers/${result.paper_id}`);
     } catch (err) {

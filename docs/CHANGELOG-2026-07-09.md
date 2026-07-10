@@ -186,7 +186,7 @@ class Asset(TimestampMixin, Base):
 ### 环境变量
 - **数据库**: PostgreSQL (postgres/postgres@127.0.0.1:5432/tpaper)
 - **Redis**: Redis (redis://127.0.0.1:6379/0)
-- **模型**: LongCat-2.0 (ak_2u634A1cq02E3t15Xw4iM39A7hX1Q)
+- **模型**: LongCat-2.0（通过 LONGCAT_API_KEY 配置）
 
 ### Docker 命令
 ```bash

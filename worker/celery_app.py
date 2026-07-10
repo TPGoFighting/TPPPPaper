@@ -11,7 +11,7 @@ celery_app = Celery(
     "tpaper",
     broker=redis_url,
     backend=redis_url,
-    include=["worker.tasks"],
+    include=["worker.tasks", "worker.tasks_simple"],
 )
 
 celery_app.conf.update(
@@ -25,9 +25,9 @@ celery_app.conf.update(
     task_acks_late=True,  # 任务完成后才确认，防止worker崩溃导致任务丢失
     worker_prefetch_multiplier=1,  # 长任务场景：每次只预取1个任务
     result_expires=3600,
-    # 超时配置 - 增加到15分钟软限制，20分钟硬限制
-    task_soft_time_limit=900,   # 15分钟软限制（触发SoftTimeLimitExceeded）
-    task_time_limit=1200,       # 20分钟硬限制（强制终止）
+    # 超时配置 - 扫描版 PDF 需 OCR，时间放宽
+    task_soft_time_limit=1800,  # 30分钟软限制（触发SoftTimeLimitExceeded）
+    task_time_limit=2400,       # 40分钟硬限制（强制终止）
     # Worker 配置
     worker_max_tasks_per_child=100,
     worker_max_memory_per_child=512000,
@@ -45,5 +45,7 @@ celery_app.conf.update(
 # 任务路由
 celery_app.conf.task_routes = {
     "worker.tasks.process_paper": {"queue": "tpaper"},
+    "worker.tasks_simple.process_paper_simple": {"queue": "tpaper"},
     "worker.tasks.*": {"queue": "tpaper"},
+    "worker.tasks_simple.*": {"queue": "tpaper"},
 }
