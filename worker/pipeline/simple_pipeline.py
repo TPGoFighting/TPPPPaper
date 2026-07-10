@@ -123,7 +123,9 @@ def _ensure_valid_document(doc: dict) -> dict:
     # 确保每个题目有必需字段
     for i, q in enumerate(doc["questions"]):
         q.setdefault("id", f"q_{i + 1}")
-        q.setdefault("number", i + 1)
+        # 模型常将同一大题下的小问都标成相同题号。渲染层需要全局唯一、
+        # 连续的题号，因此以最终 questions 数组顺序作为唯一编号来源。
+        q["number"] = i + 1
         q.setdefault("type", "subjective")
         q.setdefault("stem", "")
         q.setdefault("score", 0)
