@@ -134,13 +134,37 @@ def _ensure_valid_document(doc: dict) -> dict:
         q.setdefault("explanation", "")
         q.setdefault("needs_review", True)
 
-    # 如果没有章节，创建默认章节
-    if not doc["sections"] and doc["questions"]:
-        doc["sections"] = [{
-            "id": "default",
+    # 章节经常保留模型输出中被截断题目的 ID。只保留最终题目列表中存在的
+    # ID，并将未归类题目补入默认章节，保证所有草稿都能通过语义校验。
+    valid_ids = [q["id"] for q in doc["questions"]]
+    valid_id_set = set(valid_ids)
+    assigned_ids: set[str] = set()
+    normalized_sections = []
+    for index, section in enumerate(doc["sections"], start=1):
+        if not isinstance(section, dict):
+            continue
+        question_ids = []
+        for question_id in section.get("question_ids") or []:
+            question_id = str(question_id)
+            if question_id in valid_id_set and question_id not in assigned_ids:
+                question_ids.append(question_id)
+                assigned_ids.add(question_id)
+        if question_ids:
+            normalized_sections.append({
+                "id": str(section.get("id") or f"section_{index}"),
+                "title": str(section.get("title") or ""),
+                "question_ids": question_ids,
+            })
+
+    unassigned_ids = [qid for qid in valid_ids if qid not in assigned_ids]
+    if unassigned_ids:
+        existing_section_ids = {section["id"] for section in normalized_sections}
+        normalized_sections.append({
+            "id": "default" if "default" not in existing_section_ids else "unassigned",
             "title": "",
-            "question_ids": [q["id"] for q in doc["questions"]],
-        }]
+            "question_ids": unassigned_ids,
+        })
+    doc["sections"] = normalized_sections
 
     return doc
 
