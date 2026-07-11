@@ -39,8 +39,36 @@ PAPER_DOCUMENT_SCHEMA = """输出 JSON 必须严格符合以下 Schema：
       "reference_answer": "",
       "explanation": "解析",
       "knowledge_points": [],
+      "answer_origin": "model_knowledge",
+      "answer_sources": [],
       "confidence": 1.0,
       "needs_review": false,
+      "is_ai_generated": false
+    }
+  ]
+}"""
+
+
+# 忠实转写阶段不生成答案和解析。使用更小的 Schema 可显著减少大试卷的
+# 输出 token 与响应时间，且避免把模型推导混入来源转写。
+SOURCE_TRANSCRIPTION_SCHEMA = """输出 JSON 必须严格符合以下 Schema：
+{
+  "title": "试卷标题",
+  "language": "zh-CN",
+  "metadata": {},
+  "sections": [
+    {"id": "s_唯一ID", "title": "章节名称", "source_page": 1, "question_ids": ["q_唯一ID"]}
+  ],
+  "questions": [
+    {
+      "id": "q_唯一ID",
+      "number": 1,
+      "type": "single_choice | multi_choice | true_false | fill_blank | subjective",
+      "stem": "题干文本",
+      "score": 5.0,
+      "options": [{"key": "A", "text": "选项内容"}],
+      "source_page": 1,
+      "confidence": 1.0,
       "is_ai_generated": false
     }
   ]
@@ -60,11 +88,12 @@ def build_simple_prompt(
     if mode == "faithful_transcription":
         system = (
             "你是试卷结构化助手。根据以下文本内容生成 PaperDocument JSON。\n"
-            "忠实转写模式：必须忠实原文，提取所有题目、选项、答案。\n"
+            "第一阶段仅忠实转写：提取所有题目、选项、原卷分值和来源页码。\n"
+            "原卷未出现的答案、解析、评分点一律保持空值，绝不可自行求解或猜测。\n"
             "如果原文包含表格数据，将表格行转化为对应的题目。\n"
-            "不得擅自补充题目或修改答案。\n"
+            "不得擅自补充题目、修改题干或编造答案。每题 source_page 必须是题干所在页。\n"
             "必须返回有效的 JSON，不要包含任何其他文本。\n\n"
-        ) + PAPER_DOCUMENT_SCHEMA
+        ) + SOURCE_TRANSCRIPTION_SCHEMA
     else:
         system = (
             "你是试卷生成助手。根据以下讲义内容生成练习题。\n"
@@ -173,6 +202,11 @@ async def simple_extract_and_generate(
     adapter,
     preprocessed: dict,
     mode: str,
+    generate_answers: bool = True,
+    research_provider: str = "",
+    research_api_key: str = "",
+    research_max_results: int = 3,
+    research_timeout_seconds: int = 12,
 ) -> dict:
     """简化版提取和生成：单次 LLM 调用。
 
@@ -217,6 +251,19 @@ async def simple_extract_and_generate(
 
     # 确保文档结构有效
     doc = _ensure_valid_document(doc)
+
+    if generate_answers:
+        # 第二阶段独立生成答案、评分点和解析。分开执行能保证原文转写不被
+        # 模型的求解过程污染，并让 AI 推导/网页研究的来源在草稿中可追溯。
+        from worker.pipeline.answering import enrich_document_answers
+        logger.info("生成答案、解析与可追溯证据...")
+        doc = await enrich_document_answers(
+            adapter, doc,
+            research_provider=research_provider,
+            research_api_key=research_api_key,
+            research_max_results=research_max_results,
+            research_timeout_seconds=research_timeout_seconds,
+        )
 
     logger.info(f"生成完成: {len(doc['questions'])} 题, {len(doc['sections'])} 章节")
     return doc

@@ -17,6 +17,7 @@ sys.path.insert(0, "/app/backend")
 from worker.celery_app import celery_app
 from worker.pipeline.preprocess import preprocess
 from worker.pipeline.simple_pipeline import simple_extract_and_generate
+from worker.pipeline.answering import enrich_document_answers
 from worker.pipeline.sanitize import ensure_publishable_document
 
 logging.basicConfig(
@@ -117,9 +118,39 @@ def process_paper_simple(self, paper_id: int, source_file_id: int):
                 logger.info(f"[Paper {paper_id}] 调用 LLM 生成 PaperDocument...")
                 paper.status = "modeling"
                 db.commit()
+                from app.config import settings
+                # 先只转写原题。答案/解析阶段单独包裹，避免后一阶段失败时
+                # 用毫无价值的逐行兜底文档覆盖已成功的结构化题目。
                 document = _run_async(simple_extract_and_generate(
-                    text_adapter, preprocessed, paper.mode
+                    text_adapter, preprocessed, paper.mode,
+                    generate_answers=False,
+                    research_provider=settings.research_provider,
+                    research_api_key=settings.research_api_key,
+                    research_max_results=settings.research_max_results,
+                    research_timeout_seconds=settings.research_timeout_seconds,
                 ))
+                _update_job(db, job, stage="answering")
+                try:
+                    document = _run_async(enrich_document_answers(
+                        text_adapter, document,
+                        research_provider=settings.research_provider,
+                        research_api_key=settings.research_api_key,
+                        research_max_results=settings.research_max_results,
+                        research_timeout_seconds=settings.research_timeout_seconds,
+                    ))
+                except Exception as answer_error:
+                    logger.warning(
+                        "[Paper %s] 答案生成失败，保留转写草稿待复核: %s",
+                        paper_id, answer_error,
+                    )
+                    document.setdefault("metadata", {})["answer_generation"] = {
+                        "status": "failed",
+                        "error": str(answer_error)[:300],
+                    }
+                    for question in document.get("questions", []):
+                        question["answer_origin"] = "needs_review"
+                        question["answer_sources"] = []
+                        question["needs_review"] = True
                 _update_job(db, job, stage="rendering")
             except Exception as model_error:
                 logger.warning(f"[Paper {paper_id}] 模型生成失败，改用本地兜底: {model_error}")

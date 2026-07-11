@@ -30,7 +30,7 @@ def sanitize(html: str, css: str, document: dict) -> tuple[str, str, list[str], 
 
 
 def ensure_publishable_document(document: dict) -> dict:
-    """补齐模型漏填的题型必需字段，让草稿可审核、可发布。"""
+    """补齐基础结构，但绝不伪造答案；不完整内容必须进入人工审核。"""
     questions = document.get("questions") or []
     for question in questions:
         qtype = question.get("type")
@@ -38,22 +38,12 @@ def ensure_publishable_document(document: dict) -> dict:
         if qtype in ("single_choice", "multi_choice"):
             options = question.get("options") or []
             if not options:
-                question["options"] = [
-                    {"key": "A", "text": "请补充选项 A"},
-                    {"key": "B", "text": "请补充选项 B"},
-                ]
-                question["correct_keys"] = ["A"]
                 question["needs_review"] = True
             elif not question.get("correct_keys"):
-                first_key = options[0].get("key", "A") if isinstance(options[0], dict) else "A"
-                question["correct_keys"] = [first_key]
                 question["needs_review"] = True
         elif qtype == "true_false" and question.get("true_false_answer") is None:
-            question["true_false_answer"] = True
             question["needs_review"] = True
         elif qtype == "fill_blank" and not question.get("acceptable_answers"):
-            question["acceptable_answers"] = [["请补充答案"]]
-            question["match_rule"] = "contains"
             question["needs_review"] = True
         elif qtype == "subjective":
             has_answer = (
@@ -62,9 +52,10 @@ def ensure_publishable_document(document: dict) -> dict:
                 or question.get("explanation")
             )
             if not has_answer:
-                question["reference_answer"] = "请在审核页补充参考答案。"
-                question["scoring_points"] = ["人工确认题意", "补全答案或评分要点"]
                 question["needs_review"] = True
+        if not question.get("answer_origin"):
+            question["answer_origin"] = "needs_review"
+        question.setdefault("answer_sources", [])
     return document
 
 

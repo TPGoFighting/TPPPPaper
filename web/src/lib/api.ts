@@ -47,6 +47,8 @@ export interface Question {
   reference_answer?: string;
   explanation?: string;
   knowledge_points?: string[];
+  answer_origin?: 'model_knowledge' | 'web_researched' | 'mixed' | 'needs_review';
+  answer_sources?: { title: string; url: string; snippet?: string }[];
   needs_review?: boolean;
 }
 

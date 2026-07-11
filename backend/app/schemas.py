@@ -61,6 +61,13 @@ class QuestionOption(BaseModel):
     text: str
 
 
+class AnswerSource(BaseModel):
+    """AI 解答的外部证据；为空表示仅由模型知识推导。"""
+    title: str = ""
+    url: str = ""
+    snippet: str = ""
+
+
 class Question(BaseModel):
     """题目稳定结构。"""
     id: str = Field(..., description="稳定 ID，文档内唯一")
@@ -115,6 +122,8 @@ class Question(BaseModel):
     # 通用
     explanation: str = ""
     knowledge_points: list[str] = Field(default_factory=list)
+    answer_origin: str = "needs_review"  # model_knowledge / web_researched / mixed / needs_review
+    answer_sources: list[AnswerSource] = Field(default_factory=list)
     source_page: int | None = None
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     needs_review: bool = False
@@ -158,6 +167,8 @@ class PaperDocument(BaseModel):
             if q.type in (QuestionType.single_choice, QuestionType.multi_choice):
                 if not q.options:
                     errors.append(f"题目 {q.id}：选择题缺少选项")
+                if not q.correct_keys:
+                    errors.append(f"题目 {q.id}：选择题缺少正确答案")
                 valid_keys = {o.key for o in q.options}
                 for ck in q.correct_keys:
                     if ck not in valid_keys:
@@ -171,8 +182,15 @@ class PaperDocument(BaseModel):
                 if not q.acceptable_answers:
                     errors.append(f"题目 {q.id}：填空题缺少可接受答案")
             elif q.type == QuestionType.subjective:
-                if not q.reference_answer and not q.scoring_points and not q.explanation:
-                    errors.append(f"题目 {q.id}：主观题缺少参考答案或评分要点")
+                if not q.reference_answer:
+                    errors.append(f"题目 {q.id}：主观题缺少参考答案")
+                if not q.scoring_points:
+                    errors.append(f"题目 {q.id}：主观题缺少评分要点")
+
+            if not q.explanation:
+                errors.append(f"题目 {q.id}：缺少解析")
+            if q.answer_origin == "needs_review":
+                errors.append(f"题目 {q.id}：答案尚未可靠生成")
 
             # 分值非负（Pydantic Field ge 已保证，这里冗余检查）
             if q.score < 0:

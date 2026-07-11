@@ -71,6 +71,13 @@ class Settings(BaseSettings):
     default_model_api_key: str = ""
     default_model_name: str = "LongCat-2.0"
 
+    # ── 可选网页研究 ──
+    # 题目原件没有答案时，worker 可先检索再交给模型归纳；未配置时明确降级为模型知识。
+    research_provider: str = ""  # 当前支持 tavily
+    research_api_key: str = ""
+    research_max_results: int = Field(default=3, ge=1, le=5)
+    research_timeout_seconds: int = Field(default=12, ge=3, le=60)
+
     # ── Worker ──
     worker_concurrency: int = 4
 

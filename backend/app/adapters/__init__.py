@@ -185,7 +185,7 @@ class OpenAICompatibleAdapter:
                 success=False,
                 model=self.model,
                 latency_ms=int((time.monotonic() - start) * 1000),
-                error=str(e),
+                error=f"{type(e).__name__}: {str(e) or repr(e)}",
             )
 
         content_blocks = data.get("content", [])
@@ -231,7 +231,10 @@ class OpenAICompatibleAdapter:
                     logger.warning(f"API 调用异常 (attempt {attempt+1}/{max_retries})，{wait}s 后重试: {e}")
                     await asyncio.sleep(wait)
                     continue
-                return ModelCallResult(content="", success=False, model=self.model, error=str(e))
+                return ModelCallResult(
+                    content="", success=False, model=self.model,
+                    error=f"{type(e).__name__}: {str(e) or repr(e)}",
+                )
         return ModelCallResult(content="", success=False, model=self.model, error="Max retries exceeded")
 
     async def chat(
@@ -281,7 +284,7 @@ class OpenAICompatibleAdapter:
                 return ModelCallResult(
                     content="", success=False, model=self.model,
                     latency_ms=int((time.monotonic() - start) * 1000),
-                    error=str(e),
+                    error=f"{type(e).__name__}: {str(e) or repr(e)}",
                 )
 
             content = data["choices"][0]["message"]["content"]

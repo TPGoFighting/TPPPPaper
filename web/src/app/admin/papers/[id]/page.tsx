@@ -199,7 +199,24 @@ export default function PaperDetailPage() {
                   )}
                   {(question.explanation || question.reference_answer) && (
                     <div className="mt-3 rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] px-3 py-2 text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                      {question.explanation || question.reference_answer}
+                      {question.reference_answer && (
+                        <p><span className="font-semibold">参考答案：</span>{question.reference_answer}</p>
+                      )}
+                      {question.explanation && (
+                        <p className={question.reference_answer ? 'mt-2' : ''}><span className="font-semibold">解析：</span>{question.explanation}</p>
+                      )}
+                      {question.answer_origin && (
+                        <p className="mt-2 text-[var(--color-text-tertiary)]">
+                          依据：{question.answer_origin === 'web_researched' || question.answer_origin === 'mixed' ? '网页检索 + AI 推导' : question.answer_origin === 'model_knowledge' ? 'AI 知识推导' : '待人工复核'}
+                        </p>
+                      )}
+                      {question.answer_sources && question.answer_sources.length > 0 && (
+                        <ul className="mt-2 list-disc pl-4 text-[var(--color-text-tertiary)]">
+                          {question.answer_sources.map((source) => (
+                            <li key={source.url}><a className="underline" href={source.url} target="_blank" rel="noreferrer">{source.title || source.url}</a></li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   )}
                 </article>
