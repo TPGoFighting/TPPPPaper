@@ -17,6 +17,7 @@ sys.path.insert(0, "/app/backend")
 from worker.celery_app import celery_app
 from worker.pipeline.preprocess import preprocess
 from worker.pipeline.simple_pipeline import simple_extract_and_generate
+from worker.pipeline.sanitize import ensure_publishable_document
 
 logging.basicConfig(
     level=logging.INFO,
@@ -129,6 +130,10 @@ def process_paper_simple(self, paper_id: int, source_file_id: int):
             logger.warning(f"[Paper {paper_id}] 未配置模型 Profile，使用本地兜底")
             _update_job(db, job, stage="generating", current_page=total_pages)
             document = _build_fallback_document(paper.title, preprocessed, paper.mode)
+
+        # 模型可能遗漏主观题答案等审核必需字段。统一补齐后再渲染、校验和保存，
+        # 保证草稿可审核、可发布，而不是在最终校验阶段才暴露不完整结构。
+        document = ensure_publishable_document(document)
 
         # ── 阶段 3: 模板渲染 ──
         logger.info(f"[Paper {paper_id}] 模板渲染 HTML...")
