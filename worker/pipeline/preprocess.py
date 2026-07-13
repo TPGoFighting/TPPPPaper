@@ -9,19 +9,41 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 logger = logging.getLogger("tpaper.pipeline.preprocess")
 
 
-def preprocess_pdf(content: bytes) -> dict:
-    """PDF 预处理：提取文本，文本不足时截图进入多模态识别。"""
+def preprocess_pdf(content: bytes, include_page_images: bool = False) -> dict:
+    """PDF 预处理：提取文本，并为含图形的页面保留视觉上下文。
+
+    仅以文字长度判断是否需要视觉模型会遗漏可提取文字页中的公式、
+    表格或矢量图（例如算法题里的状态图）。启用视觉模型时，同时渲染
+    含嵌入图像或矢量绘制的页面，让后续转写把这些信息与文本层合并。
+    """
     extracted_pages = []
     try:
         import fitz  # pymupdf
         doc = fitz.open(stream=content, filetype="pdf")
         for i, page in enumerate(doc):
             text = page.get_text() or ""
-            extracted_pages.append({
+            needs_multimodal = len(text.strip()) < 50
+            page_info = {
                 "page": i + 1,
                 "text": text,
-                "needs_multimodal": len(text.strip()) < 50,
-            })
+                "needs_multimodal": needs_multimodal,
+            }
+
+            # get_drawings 能识别 PDF 中的表格线、棋盘格、流程图等矢量
+            # 元素；这些内容通常不在 get_text 的结果中。单个页面查询失败
+            # 不应让整份文件无法处理。
+            visual_count = 0
+            if include_page_images:
+                try:
+                    visual_count = len(page.get_images(full=True)) + len(page.get_drawings())
+                except Exception as exc:
+                    logger.debug("第 %s 页视觉元素检测失败: %s", i + 1, exc)
+                if needs_multimodal or visual_count:
+                    pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
+                    page_info["image_b64"] = base64.b64encode(pix.tobytes("png")).decode()
+                    page_info["mime"] = "image/png"
+                    page_info["has_visual_content"] = bool(visual_count)
+            extracted_pages.append(page_info)
         doc.close()
     except ImportError:
         logger.warning("pymupdf 未安装，PDF 文本提取不可用")
@@ -129,7 +151,7 @@ def preprocess_image(content: bytes, mime: str) -> dict:
     }
 
 
-def preprocess(source_file) -> dict:
+def preprocess(source_file, include_page_images: bool = False) -> dict:
     """根据类型分发预处理。"""
     from app.config import settings
     from app.storage import get_storage
@@ -138,7 +160,7 @@ def preprocess(source_file) -> dict:
     content = storage.get(settings.source_files_namespace, source_file.storage_key)
 
     if source_file.mime_type == "application/pdf":
-        return preprocess_pdf(content)
+        return preprocess_pdf(content, include_page_images=include_page_images)
     elif "wordprocessing" in source_file.mime_type:
         return preprocess_docx(content)
     elif source_file.mime_type.startswith("image/"):

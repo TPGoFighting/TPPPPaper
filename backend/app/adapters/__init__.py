@@ -194,6 +194,20 @@ class OpenAICompatibleAdapter:
             if isinstance(block, dict) and block.get("type") == "text":
                 content += block.get("text", "")
         usage = data.get("usage", {})
+        # 部分兼容端点会以 HTTP 200 返回空 content。把它视为失败并进入
+        # 既有退避重试，而不是让下游 JSON 解析报一个无上下文的错误。
+        if not content.strip():
+            return ModelCallResult(
+                content="",
+                success=False,
+                model=data.get("model", self.model),
+                latency_ms=int((time.monotonic() - start) * 1000),
+                error=(
+                    "模型返回空文本 "
+                    f"(stop_reason={data.get('stop_reason', 'unknown')}, "
+                    f"content_blocks={len(content_blocks)})"
+                ),
+            )
         return ModelCallResult(
             content=content,
             success=True,
@@ -208,7 +222,10 @@ class OpenAICompatibleAdapter:
 
     def _is_retryable(self, error: str) -> bool:
         """判断错误是否可重试。"""
-        retryable = ["timeout", "529", "503", "429", "rate_limit", "overloaded", "connection"]
+        retryable = [
+            "timeout", "529", "503", "429", "rate_limit", "overloaded", "connection",
+            "模型返回空文本",
+        ]
         return any(r in error.lower() for r in retryable)
 
     async def _call_with_retry(self, coro_factory, max_retries: int = 3):

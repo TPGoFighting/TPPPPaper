@@ -78,6 +78,7 @@ SOURCE_TRANSCRIPTION_SCHEMA = """输出 JSON 必须严格符合以下 Schema：
 def build_simple_prompt(
     text_content: str,
     mode: str,
+    visual_pages: list[dict[str, Any]] | None = None,
     max_chars: int = 100000,
 ) -> list[dict[str, Any]]:
     """构建简化版 Prompt：单次调用生成完整 PaperDocument。"""
@@ -91,6 +92,8 @@ def build_simple_prompt(
             "第一阶段仅忠实转写：提取所有题目、选项、原卷分值和来源页码。\n"
             "原卷未出现的答案、解析、评分点一律保持空值，绝不可自行求解或猜测。\n"
             "如果原文包含表格数据，将表格行转化为对应的题目。\n"
+            "若同时提供页面图片，必须将图片中的公式、表格、图形、代码和状态信息\n"
+            "与文字层合并转写；图片是原文件的一部分，不能因文字层不完整而省略。\n"
             "不得擅自补充题目、修改题干或编造答案。每题 source_page 必须是题干所在页。\n"
             "必须返回有效的 JSON，不要包含任何其他文本。\n\n"
         ) + SOURCE_TRANSCRIPTION_SCHEMA
@@ -103,7 +106,30 @@ def build_simple_prompt(
             "必须返回有效的 JSON，不要包含任何其他文本。\n\n"
         ) + PAPER_DOCUMENT_SCHEMA
 
-    user = f"文本内容：\n\n{text_content}"
+    user: str | list[dict[str, Any]] = f"文本内容：\n\n{text_content}"
+    visual_pages = visual_pages or []
+    if visual_pages:
+        user = [{"type": "text", "text": f"文字层内容：\n\n{text_content}"}]
+        for page in visual_pages:
+            image_b64 = page.get("image_b64")
+            if not image_b64:
+                continue
+            page_number = page.get("page", "?")
+            user.extend([
+                {
+                    "type": "text",
+                    "text": (
+                        f"以下是第 {page_number} 页的原始页面图。请用它补全文字层遗漏的"
+                        "公式、图表、序列、状态、表格和代码，并保留该页来源页码。"
+                    ),
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{page.get('mime', 'image/png')};base64,{image_b64}",
+                    },
+                },
+            ])
     return [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
@@ -202,6 +228,7 @@ async def simple_extract_and_generate(
     adapter,
     preprocessed: dict,
     mode: str,
+    vision_adapter=None,
     generate_answers: bool = True,
     research_provider: str = "",
     research_api_key: str = "",
@@ -239,8 +266,14 @@ async def simple_extract_and_generate(
 
     # 单次 LLM 调用（大输出：题目较多，需提高 max_tokens 防止截断）
     logger.info(f"调用 LLM 生成 PaperDocument (模式: {mode})...")
-    msgs = build_simple_prompt(combined_text, mode)
-    result = await adapter.chat(msgs, response_format_json=True, max_tokens=32000)
+    visual_pages = [page for page in pages if page.get("image_b64")]
+    model_adapter = vision_adapter if visual_pages and vision_adapter else adapter
+    if visual_pages and not vision_adapter:
+        logger.warning("检测到 %s 个视觉页面，但当前模型未启用视觉能力", len(visual_pages))
+    elif visual_pages:
+        logger.info("附加 %s 个含视觉内容的页面供模型忠实转写", len(visual_pages))
+    msgs = build_simple_prompt(combined_text, mode, visual_pages=visual_pages)
+    result = await model_adapter.chat(msgs, response_format_json=True, max_tokens=32000)
 
     if not result.success:
         raise RuntimeError(f"LLM 调用失败: {result.error}")

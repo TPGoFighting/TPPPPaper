@@ -53,7 +53,14 @@ def _get_adapters(profile):
         timeout=profile.timeout_seconds,
         allow_private_network=profile.allow_private_network,
     )
-    return text_adapter
+    vision_adapter = OpenAICompatibleAdapter(
+        base_url=profile.base_url,
+        api_key=api_key,
+        model=profile.multimodal_model,
+        timeout=profile.timeout_seconds,
+        allow_private_network=profile.allow_private_network,
+    )
+    return text_adapter, vision_adapter
 
 
 def _update_job(db, job, **kwargs):
@@ -86,8 +93,9 @@ def process_paper_simple(self, paper_id: int, source_file_id: int):
         # 获取活跃模型 Profile
         profile = db.query(ModelProfile).filter(ModelProfile.is_active.is_(True)).first()
         text_adapter = None
+        vision_adapter = None
         if profile:
-            text_adapter = _get_adapters(profile)
+            text_adapter, vision_adapter = _get_adapters(profile)
 
         # 创建任务记录
         job = ProcessingJob(
@@ -106,7 +114,10 @@ def process_paper_simple(self, paper_id: int, source_file_id: int):
 
         # ── 阶段 1: 预处理 ──
         logger.info(f"[Paper {paper_id}] 预处理...")
-        preprocessed = _run_async(_preprocess(source))
+        preprocessed = _run_async(_preprocess(
+            source,
+            include_page_images=bool(profile and profile.supports_vision),
+        ))
         total_pages = preprocessed["page_count"]
         _update_job(db, job, total_pages=total_pages, stage="generating")
         source.page_count = total_pages
@@ -123,6 +134,7 @@ def process_paper_simple(self, paper_id: int, source_file_id: int):
                 # 用毫无价值的逐行兜底文档覆盖已成功的结构化题目。
                 document = _run_async(simple_extract_and_generate(
                     text_adapter, preprocessed, paper.mode,
+                    vision_adapter=vision_adapter if profile and profile.supports_vision else None,
                     generate_answers=False,
                     research_provider=settings.research_provider,
                     research_api_key=settings.research_api_key,
@@ -225,9 +237,9 @@ def process_paper_simple(self, paper_id: int, source_file_id: int):
         db.close()
 
 
-async def _preprocess(source):
+async def _preprocess(source, include_page_images: bool = False):
     """异步包装预处理。"""
-    return preprocess(source)
+    return preprocess(source, include_page_images=include_page_images)
 
 
 def _build_fallback_document(title: str, preprocessed: dict, mode: str) -> dict:
