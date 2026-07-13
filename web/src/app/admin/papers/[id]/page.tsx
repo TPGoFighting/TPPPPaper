@@ -65,13 +65,13 @@ export default function PaperDetailPage() {
   }
 
   async function publishDraft() {
-    if (!draft) return;
     setMessage('');
     setError('');
+    if (!draft?.is_valid) {
+      setError('草稿未通过校验，无法发布。请先修复审核项后重新校验。');
+      return;
+    }
     try {
-      if (!draft.is_valid) {
-        await validateDraft();
-      }
       await api.post<Publication>('/publications', { draft_id: draft.id });
       setMessage('发布成功，公开页面已更新。');
       await loadDetail();
@@ -126,7 +126,13 @@ export default function PaperDetailPage() {
               打开公开页
             </Link>
           )}
-          <button type="button" onClick={publishDraft} disabled={!draft} className="tp-button-primary">
+          <button
+            type="button"
+            onClick={publishDraft}
+            disabled={!draft?.is_valid}
+            title={!draft?.is_valid ? '请先通过草稿校验' : undefined}
+            className="tp-button-primary"
+          >
             发布
           </button>
         </div>
