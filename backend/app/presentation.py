@@ -504,7 +504,7 @@ def _render_question(q: dict, q_number: int, q_type: str, qid: str) -> str:
     reference_answer = _escape_html(q.get("reference_answer", ""))
     options = q.get("options", [])
     correct_keys = q.get("correct_keys", [])
-    score = q.get("score", 0)
+    score = q.get("score") or 0
     qnum_style = QNUM_COLORS.get(q_type, "")
     # 将内联样式转换为 CSS 类名
     qnum_class = "q-num"
@@ -794,7 +794,7 @@ def render_paper(document: dict[str, Any], title: str = "试卷") -> tuple[str, 
 
     # 计算统计信息
     total_questions = len(questions)
-    total_score = sum(q.get("score", 0) for q in questions)
+    total_score = sum(q.get("score") or 0 for q in questions)
 
     html_parts = []
 
@@ -853,7 +853,7 @@ def render_paper(document: dict[str, Any], title: str = "试卷") -> tuple[str, 
             icon_class = " si-subjective"
 
         # 计算章节分值
-        sec_score = sum(q.get("score", 0) for q in sec_qs)
+        sec_score = sum(q.get("score") or 0 for q in sec_qs)
 
         # 章节分隔线（非第一个章节时添加）
         if si > 0 and sec_title:
