@@ -56,7 +56,7 @@ services:
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
       STORAGE_ROOT: /data/storage
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://tpaper.tpgofighting.top}
-      CORS_ORIGINS: ${CORS_ORIGINS:-["https://tpaper.tpgofighting.top","http://localhost:3000","http://127.0.0.1:3000","http://43.142.121.230:8086"]}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["https://tpaper.tpgofighting.top","http://localhost:3000","http://127.0.0.1:3000"]}
       DEFAULT_MODEL_PROFILE_NAME: ${DEFAULT_MODEL_PROFILE_NAME:-LongCat}
       DEFAULT_MODEL_BASE_URL: ${DEFAULT_MODEL_BASE_URL:-}
       DEFAULT_MODEL_API_KEY: ${DEFAULT_MODEL_API_KEY:-}
@@ -113,13 +113,14 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.web
+      args:
+        NEXT_PUBLIC_DIRECT_API_URL: ""
     restart: unless-stopped
     depends_on:
       api:
         condition: service_healthy
     environment:
       API_INTERNAL_URL: http://api:8000
-      NEXT_PUBLIC_DIRECT_API_URL: http://43.142.121.230:8086
       NODE_ENV: production
     ports:
       - "3000:3000"

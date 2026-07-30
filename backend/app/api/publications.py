@@ -16,7 +16,7 @@ router = APIRouter(prefix="/publications", tags=["publications"])
 
 
 @router.post("/precheck")
-async def precheck(draft_id: int, db: DBSession, _: AdminUser):
+async def precheck(draft_id: int, db: DBSession, _: AdminUser, __: CSRFProtected):
     """发布预检：校验结构、净化 HTML/CSS，返回被删除项。"""
     draft = db.get(PaperDraft, draft_id)
     if not draft:
@@ -59,8 +59,17 @@ async def publish(body: PublishIn, db: DBSession, admin: AdminUser, _: CSRFProte
     draft = db.get(PaperDraft, body.draft_id)
     if not draft:
         raise HTTPException(status_code=404, detail="草稿未找到")
-    if not draft.is_valid:
-        raise HTTPException(status_code=400, detail="草稿未通过校验，无法发布")
+    # 发布前终极实时结构与语义校验（防止静态字段陈旧）
+    from ..schemas import PaperDocument
+    try:
+        doc = PaperDocument.model_validate(draft.document)
+        errors = doc.semantic_validate()
+        if errors:
+            raise HTTPException(status_code=400, detail=f"草稿未通过结构校验: {errors[0]}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"草稿结构校验异常: {e}")
 
     paper = db.get(Paper, draft.paper_id)
     if not paper:
@@ -108,6 +117,7 @@ async def list_publications(paper_id: int, db: DBSession, _: AdminUser):
         db.query(PublicationVersion)
         .filter(PublicationVersion.paper_id == paper_id)
         .order_by(PublicationVersion.version.desc())
+        .limit(50)
         .all()
     )
 

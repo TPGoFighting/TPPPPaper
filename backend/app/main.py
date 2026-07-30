@@ -2,18 +2,22 @@
 
 对应 SPEC 第 13 节 API 边界。所有路由按资源分组。
 """
+import time
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .database import engine, Base
+from .logging_config import get_logger, setup_logging
 from .api import (
     assets,
     auth,
     drafts,
     jobs,
+    metrics,
     model_profiles,
     papers,
     publications,
@@ -21,9 +25,13 @@ from .api import (
     uploads,
 )
 
+logger = get_logger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
+    logger.info("app_startup", service="tpaper-api")
     # 启动时确保存储目录存在
     settings.storage_path
     # 创建数据库表（本地开发模式，SQLite）
@@ -87,6 +95,39 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    """记录每个 HTTP 请求的方法、路径、状态码和耗时。"""
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4())[:8])
+    start = time.monotonic()
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        logger.error(
+            "api_request_failed",
+            method=request.method,
+            path=request.url.path,
+            duration_ms=duration_ms,
+            request_id=request_id,
+            error=str(exc),
+        )
+        raise
+    duration_ms = int((time.monotonic() - start) * 1000)
+    # 跳过健康检查的日志噪音
+    if request.url.path not in ("/health", "/"):
+        logger.info(
+            "api_request",
+            method=request.method,
+            path=request.url.path,
+            status=response.status_code,
+            duration_ms=duration_ms,
+            request_id=request_id,
+        )
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
 # 注册路由
 api_prefix = settings.api_prefix
 app.include_router(auth.router, prefix=api_prefix)
@@ -98,6 +139,7 @@ app.include_router(drafts.router, prefix=api_prefix)
 app.include_router(publications.router, prefix=api_prefix)
 app.include_router(public.router, prefix=api_prefix)
 app.include_router(assets.router, prefix=api_prefix)
+app.include_router(metrics.router, prefix=api_prefix)
 
 
 @app.get("/health")

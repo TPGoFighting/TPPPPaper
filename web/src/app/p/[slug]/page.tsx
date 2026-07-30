@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 
@@ -19,21 +19,50 @@ export default function PublicPaperPage() {
   const [paper, setPaper] = useState<PublicPaper | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let isSubscribed = true;
+
     async function loadPublicPaper() {
       try {
         const data = await api.get<PublicPaper>(`/public/papers/${params.slug}`, { auth: false });
-        setPaper(data);
+        if (isSubscribed) {
+          setPaper(data);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : '页面加载失败');
+        if (isSubscribed) {
+          setError(err instanceof Error ? err.message : '页面加载失败');
+        }
       } finally {
-        setLoading(false);
+        if (isSubscribed) {
+          setLoading(false);
+        }
       }
     }
 
-    loadPublicPaper();
+    void loadPublicPaper();
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [params.slug]);
+
+  // 当 paper 挂载完成后，激活并运行注入 HTML 中的交互 Runtime <script>
+  useEffect(() => {
+    if (!paper || !containerRef.current) return;
+    const container = containerRef.current;
+    const oldScripts = Array.from(container.querySelectorAll('script'));
+
+    oldScripts.forEach((oldScript) => {
+      const newScript = document.createElement('script');
+      Array.from(oldScript.attributes).forEach((attr) => {
+        newScript.setAttribute(attr.name, attr.value);
+      });
+      newScript.textContent = oldScript.textContent;
+      oldScript.parentNode?.replaceChild(newScript, oldScript);
+    });
+  }, [paper]);
 
   if (loading) {
     return (
@@ -57,7 +86,7 @@ export default function PublicPaperPage() {
   return (
     <main className="min-h-[100dvh] bg-white">
       <style dangerouslySetInnerHTML={{ __html: paper.compiled_css }} />
-      <div dangerouslySetInnerHTML={{ __html: paper.compiled_html }} />
+      <div ref={containerRef} dangerouslySetInnerHTML={{ __html: paper.compiled_html }} />
     </main>
   );
 }

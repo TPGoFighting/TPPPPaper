@@ -60,10 +60,17 @@ export default function Navbar({ open, onClose }: NavbarProps) {
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [open, onClose]);
 
   const isActive = (href: string) => {
     if (href === '/admin') return pathname === '/admin';

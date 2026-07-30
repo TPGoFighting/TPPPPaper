@@ -44,3 +44,18 @@ build/
 output_exam.html
 test_flow.py
 work/
+
+# Cache
+.pytest_cache/
+.ruff_cache/
+
+# Test artifacts
+tests/output/
+tests/tmp/
+tests/llm_pipeline/
+
+# AI assistant workspace (local session memory)
+.workbuddy/
+
+# Deprecated/archived worker pipelines (not registered in Celery, do not use)
+worker/archive/

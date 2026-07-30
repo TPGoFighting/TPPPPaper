@@ -9,11 +9,14 @@ import socket
 from urllib.parse import urlparse
 
 import bleach
+import structlog
 import tinycss2
 from cryptography.fernet import Fernet
 from passlib.context import CryptContext
 
 from ..config import settings
+
+logger = structlog.get_logger(__name__)
 
 # ── 密码哈希（SPEC 16：使用现代密码哈希算法）──
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -182,7 +185,9 @@ def sanitize_html(html: str) -> tuple[str, list[str]]:
         scripts.append(m.group(0))
         return placeholder.format(idx)
 
-    html_without_scripts = re.sub(r"<script\b[^>]*>.*?</script>", save_script, html, flags=re.DOTALL)
+    html_without_scripts = re.sub(
+        r"<script\b[^>]*>.*?</script>", save_script, html, flags=re.DOTALL | re.IGNORECASE
+    )
 
     # bleach 净化
     cleaned = bleach.clean(
@@ -208,8 +213,18 @@ def sanitize_html(html: str) -> tuple[str, list[str]]:
     # 事件处理属性
     for tag in soup.find_all(True):
         for attr in list(tag.attrs):
-            if attr.startswith("on"):
+            if attr.lower().startswith("on"):
                 removed.append(f"{tag.name}[{attr}]")
+
+    if removed:
+        logger.warning(
+            "sanitize_blocked",
+            sanitizer="html",
+            blocked_count=len(removed),
+            blocked_items=removed[:10],
+            input_len=len(html),
+            output_len=len(cleaned),
+        )
 
     return cleaned, removed
 
@@ -273,7 +288,18 @@ def sanitize_css(css: str, scope_selector: str = ".tp-publication") -> tuple[str
             scoped_prelude = ", ".join(scoped_selectors)
             safe_rules.append(f"{scoped_prelude} {{{content_str.strip()}}}")
 
-    return "\n".join(safe_rules), removed
+    result = "\n".join(safe_rules)
+    if removed:
+        logger.warning(
+            "sanitize_blocked",
+            sanitizer="css",
+            blocked_count=len(removed),
+            blocked_items=removed[:10],
+            input_len=len(css),
+            output_len=len(result),
+        )
+
+    return result, removed
 
 
 def content_hash(html: str, css: str, document: str) -> str:

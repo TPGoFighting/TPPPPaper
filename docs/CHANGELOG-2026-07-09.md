@@ -1,7 +1,6 @@
 # 更新日志 - 2026-07-09
 
 > **在线体验**: https://tpaper.tpgofighting.top
-> **管理员账号**: admin / rkiOqvL2WR7Uwlw0
 
 ---
 
@@ -179,14 +178,12 @@ class Asset(TimestampMixin, Base):
 ## 部署信息
 
 ### 服务器
-- **IP**: 43.142.121.230
 - **部署目录**: `/opt/tpaper/`
-- **SSH**: `ssh -i ~/.ssh/tpbili.pem root@43.142.121.230`
+- **连接方式**: 见团队内部部署文档
 
 ### 环境变量
-- **数据库**: PostgreSQL (postgres/postgres@127.0.0.1:5432/tpaper)
-- **Redis**: Redis (redis://127.0.0.1:6379/0)
-- **模型**: LongCat-2.0（通过 LONGCAT_API_KEY 配置）
+- 所有配置通过 `.env` 文件管理，不在此文档中记录
+- 参考 `.env.example` 了解所需变量
 
 ### Docker 命令
 ```bash

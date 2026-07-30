@@ -21,7 +21,10 @@ async def get_asset(asset_id: int, db: DBSession, _: AdminUser):
         raise HTTPException(status_code=404, detail="未找到")
     storage = get_storage()
     namespace = settings.assets_namespace
-    data = storage.get(namespace, asset.storage_key)
+    try:
+        data = storage.get(namespace, asset.storage_key)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="媒体文件未找到或已被清理")
     return Response(
         content=data,
         media_type=asset.media_type if asset.media_type.startswith("image/") else "application/octet-stream",
@@ -35,7 +38,10 @@ async def get_public_asset(asset_id: int, db: DBSession):
     if not asset or not asset.is_public:
         raise HTTPException(status_code=404, detail="未找到")
     storage = get_storage()
-    data = storage.get(settings.assets_namespace, asset.storage_key)
+    try:
+        data = storage.get(settings.assets_namespace, asset.storage_key)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="媒体文件未找到或已被清理")
     return Response(
         content=data,
         media_type=asset.media_type if asset.media_type.startswith("image/") else "application/octet-stream",

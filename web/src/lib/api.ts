@@ -118,13 +118,14 @@ class ApiClientError extends Error implements ApiError {
 
 interface FetchOptions extends RequestInit {
   auth?: boolean;
+  timeoutMs?: number;
 }
 
 async function request<T>(
   path: string,
   options: FetchOptions = {}
 ): Promise<T> {
-  const { auth = true, headers: customHeaders, ...rest } = options;
+  const { auth: _auth = true, headers: customHeaders, timeoutMs = 30000, ...rest } = options;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(customHeaders as Record<string, string>),
@@ -138,12 +139,16 @@ async function request<T>(
   let lastError: ApiClientError | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(`${BASE_URL}${path}`, {
         ...rest,
         credentials: 'include',
         headers,
+        signal: controller.signal,
       });
+      clearTimeout(timer);
 
       if (!res.ok) {
         let details: unknown;
@@ -152,8 +157,12 @@ async function request<T>(
         } catch {
           // 响应非 JSON
         }
+        const detailMsg =
+          details && typeof details === 'object' && 'detail' in details && typeof (details as { detail: unknown }).detail === 'string'
+            ? (details as { detail: string }).detail
+            : `请求失败: ${res.status} ${res.statusText}`;
         const err = new ApiClientError(
-          `请求失败: ${res.status} ${res.statusText}`,
+          detailMsg,
           res.status,
           details
         );
@@ -176,12 +185,11 @@ async function request<T>(
       if (err instanceof ApiClientError) {
         throw err;
       }
+      const isTimeout = err instanceof Error && err.name === 'AbortError';
+      const errMsg = isTimeout ? '网络请求超时' : `网络错误: ${err instanceof Error ? err.message : '未知'}`;
       // 网络错误重试
       if (attempt < maxRetries) {
-        lastError = new ApiClientError(
-          `网络错误: ${err instanceof Error ? err.message : '未知'}`,
-          0
-        );
+        lastError = new ApiClientError(errMsg, 0);
         await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
         continue;
       }
@@ -216,29 +224,38 @@ export const api = {
   delete: <T>(path: string, options?: FetchOptions) =>
     request<T>(path, { ...options, method: 'DELETE' }),
   upload: async <T>(path: string, formData: FormData, options: FetchOptions = {}) => {
-    const { auth = true, headers: customHeaders, ...rest } = options;
+    const { auth: _auth = true, headers: customHeaders, ...rest } = options;
     const headers: Record<string, string> = {
       'X-Requested-With': 'XMLHttpRequest',
       ...(customHeaders as Record<string, string>),
     };
 
-    const res = await fetch(`${BASE_URL}${path}`, {
-      ...rest,
-      method: 'POST',
-      body: formData,
-      credentials: 'include',
-      headers,
-    });
+    // 上传大文件时 Cloudflare 可能引入显著延迟（~10s+），使用较长超时
+    const controller = new AbortController();
+    const uploadTimeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 120000);
 
-    if (!res.ok) {
-      let details: unknown;
-      try {
-        details = await res.json();
-      } catch {}
-      throw new ApiClientError(`请求失败: ${res.status} ${res.statusText}`, res.status, details);
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        ...rest,
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        headers,
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        let details: unknown;
+        try {
+          details = await res.json();
+        } catch {}
+        throw new ApiClientError(`请求失败: ${res.status} ${res.statusText}`, res.status, details);
+      }
+
+      return res.json() as Promise<T>;
+    } finally {
+      clearTimeout(uploadTimeout);
     }
-
-    return res.json() as Promise<T>;
   },
 };
 

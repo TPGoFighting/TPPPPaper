@@ -88,13 +88,32 @@ async def delete_profile(profile_id: int, db: DBSession, _: AdminUser, __: CSRFP
 
 
 @router.post("/test-connection")
-async def test_connection(body: TestConnectionIn, _: AdminUser):
-    """测试模型连接。"""
+async def test_connection(body: TestConnectionIn, db: DBSession, _: AdminUser, __: CSRFProtected):
+    """测试模型连接。支持明文 api_key 或通过 profile_id 自动解密数据库凭证进行测试。"""
+    api_key = body.api_key or ""
+    base_url = body.base_url
+    model = body.model
+    allow_private = body.allow_private_network
+
+    if body.profile_id:
+        profile = db.get(ModelProfile, body.profile_id)
+        if profile:
+            if not api_key and profile.encrypted_api_key:
+                api_key = decrypt_secret(profile.encrypted_api_key)
+            if not base_url:
+                base_url = profile.base_url
+            if not model:
+                model = profile.text_model
+            allow_private = profile.allow_private_network
+
+    if not api_key:
+        raise HTTPException(status_code=400, detail="未提供 API Key 且无法找到已保存的有效密钥")
+
     adapter = OpenAICompatibleAdapter(
-        base_url=body.base_url,
-        api_key=body.api_key,
-        model=body.model,
-        allow_private_network=body.allow_private_network,
+        base_url=base_url,
+        api_key=api_key,
+        model=model,
+        allow_private_network=allow_private,
     )
     result = await adapter.test_connection()
     return {

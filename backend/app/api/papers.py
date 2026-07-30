@@ -41,15 +41,8 @@ async def get_paper(paper_id: int, db: DBSession, _: AdminUser):
 
 @router.post("", response_model=PaperOut, status_code=201)
 async def create_paper(body: PaperCreate, db: DBSession, _: AdminUser, __: CSRFProtected):
-    import slugify
     repo = PaperRepository(db)
-
-    slug = slugify.slugify(body.title)[:60] or "paper"
-    suffix = 1
-    while repo.slug_exists(slug):
-        slug = f"{slug}-{suffix}"
-        suffix += 1
-
+    slug = repo.generate_unique_slug(body.title)
     return repo.create(title=body.title, slug=slug, mode=body.mode.value)
 
 

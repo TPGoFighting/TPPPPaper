@@ -32,15 +32,16 @@
 
 | 文件 | 作用 |
 |------|------|
-| `backend/app/api/__init__.py` | API 包初始化 |
 | `backend/app/api/auth.py` | 认证 API（登录/登出/会话） |
 | `backend/app/api/papers.py` | 试卷 CRUD API |
 | `backend/app/api/uploads.py` | 文件上传 API |
 | `backend/app/api/jobs.py` | 任务 API（状态查询、SSE 流） |
-| `backend/app/api/publish.py` | 发布 API（公开链接） |
-| `backend/app/api/models.py` | 模型配置 API |
-| `backend/app/api/assets.py` | 资源 API（图片等） |
-| `backend/app/api/drafts.py` | 草稿 API |
+| `backend/app/api/publications.py` | 发布 API（公开链接与版本控制） |
+| `backend/app/api/model_profiles.py` | 模型配置 API 与一键诊断 |
+| `backend/app/api/assets.py` | 资源 API（图片与私有卷访问） |
+| `backend/app/api/drafts.py` | 草稿 API 与 AI 局部修题 |
+| `backend/app/api/public.py` | 公开复习读取 API |
+| `backend/app/api/metrics.py` | 监控仪表盘指标 API |
 
 ### 数据模型
 
@@ -59,7 +60,6 @@
 | 文件 | 作用 |
 |------|------|
 | `backend/app/processing.py` | 进程内处理（Redis 不可用时的备选） |
-| `backend/app/pipeline.py` | 流水线编排（已迁移到 worker/pipeline） |
 
 ---
 
@@ -73,26 +73,27 @@
 | `web/src/app/page.tsx` | 首页 |
 | `web/src/app/login/page.tsx` | 登录页 |
 | `web/src/app/admin/layout.tsx` | 管理后台布局（认证守卫） |
-| `web/src/app/admin/papers/page.tsx` | 试卷列表页 |
-| `web/src/app/admin/papers/new/page.tsx` | 创建试卷页 |
-| `web/src/app/admin/papers/[id]/page.tsx` | 试卷编辑页 |
-| `web/src/app/p/[slug]/page.tsx` | 公开页面（无需登录） |
+| `web/src/app/admin/page.tsx` | 工作台试卷列表页 |
+| `web/src/app/admin/upload/page.tsx` | 上传试卷资料页 |
+| `web/src/app/admin/settings/page.tsx` | 模型配置设置页 |
+| `web/src/app/admin/papers/[id]/page.tsx` | 试卷编辑审核页 |
+| `web/src/app/p/[slug]/page.tsx` | 公开复习页面（无需登录） |
 
-### 组件
+### 组件与功能模块
 
 | 文件 | 作用 |
 |------|------|
-| `web/src/components/Navbar.tsx` | 导航栏（登出逻辑） |
-| `web/src/components/ErrorBoundary.tsx` | 全局错误边界 |
-| `web/src/components/PaperCard.tsx` | 试卷卡片组件 |
-| `web/src/components/ProgressBar.tsx` | 进度条组件 |
+| `web/src/components/Navbar.tsx` | 导航栏（无障碍抽屉、登出逻辑） |
+| `web/src/components/ErrorBoundary.tsx` | 全局错误边界与自愈重试 |
+| `web/src/components/BrandMark.tsx` | 顶栏 Logo 品牌优化组件 |
+| `web/src/components/StatusBadge.tsx` | 状态标签组件 |
+| `web/src/features/admin-dashboard/components.tsx` | 工作台仪表盘与试卷卡片核心组件 |
 
 ### 工具库
 
 | 文件 | 作用 |
 |------|------|
-| `web/src/lib/api.ts` | API 客户端（重试、CSRF、cookie） |
-| `web/src/lib/utils.ts` | 工具函数 |
+| `web/src/lib/api.ts` | API 客户端（超时重试、CSRF、Cookie、错误解构） |
 
 ### 样式
 
@@ -116,9 +117,9 @@
 
 | 文件 | 作用 |
 |------|------|
-| `worker/__init__.py` | Worker 包初始化 |
 | `worker/celery_app.py` | Celery 实例配置 |
-| `worker/tasks.py` | Celery 任务定义（process_paper） |
+| `worker/tasks.py` | 主 Celery 任务定义（process_paper Pipeline） |
+| `worker/tasks_simple.py` | 快速路径 Celery 任务定义（process_paper_simple） |
 
 ### 流水线
 

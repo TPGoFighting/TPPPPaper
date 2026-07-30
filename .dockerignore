@@ -1,0 +1,43 @@
+# Version control
+.git
+.gitignore
+
+# Documentation
+docs/
+*.md
+!SPEC.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Tests
+tests/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+web/.next/
+
+# Data
+data/
+*.db
+*.db-journal
+
+# Work directory
+work/
+
+# OS
+.DS_Store
+Thumbs.db

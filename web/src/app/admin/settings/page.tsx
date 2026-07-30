@@ -47,7 +47,7 @@ export default function SettingsPage() {
       }
     }
 
-    loadProfiles();
+    void loadProfiles();
   }, []);
 
   async function saveProfile() {
@@ -86,9 +86,9 @@ export default function SettingsPage() {
   }
 
   async function testConnection() {
-    if (!apiKey) {
+    if (!apiKey && !activeId) {
       setState('error');
-      setMessage('测试连接需要填写 API Key。');
+      setMessage('测试连接需要填写 API Key 或选择已保存的模型配置。');
       return;
     }
 
@@ -101,8 +101,9 @@ export default function SettingsPage() {
         model: string;
         error?: string;
       }>('/model-profiles/test-connection', {
+        profile_id: activeId ?? undefined,
         base_url: baseUrl,
-        api_key: apiKey,
+        api_key: apiKey || undefined,
         model: textModel,
         allow_private_network: false,
       });
@@ -116,6 +117,8 @@ export default function SettingsPage() {
       setMessage(err instanceof Error ? err.message : '连接失败');
     }
   }
+
+  const activeProfile = profiles.find((p) => p.id === activeId) ?? profiles[0];
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 md:py-8">
@@ -144,7 +147,7 @@ export default function SettingsPage() {
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               type="password"
-              placeholder={profiles[0]?.api_key_masked || 'ak_...'}
+              placeholder={activeProfile?.api_key_masked || '留空保留已加密密钥 (ak_...)'}
               className="tp-input font-mono"
             />
           </Field>

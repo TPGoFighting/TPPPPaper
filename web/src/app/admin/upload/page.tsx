@@ -50,7 +50,7 @@ export default function UploadPage() {
       formData.append('file', file.raw);
       const apiMode = mode === 'faithful' ? 'faithful_transcription' : 'lecture_to_quiz';
 
-      // 大文件（>5MB）直传 API，绕过 Cloudflare 100s 超时限制
+      // 大文件直传 API（需配置 NEXT_PUBLIC_DIRECT_API_URL 指向非 Cloudflare 代理的源站地址）
       const DIRECT_API_THRESHOLD = 5 * 1024 * 1024;
       const DIRECT_API_URL = process.env.NEXT_PUBLIC_DIRECT_API_URL ?? '';
 

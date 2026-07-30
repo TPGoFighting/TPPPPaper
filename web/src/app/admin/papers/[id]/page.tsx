@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import StatusBadge from '@/components/StatusBadge';
@@ -26,7 +26,7 @@ export default function PaperDetailPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  async function loadDetail() {
+  const loadDetail = useCallback(async () => {
     try {
       setError('');
       const nextPaper = await api.get<Paper>(`/papers/${paperId}`);
@@ -42,13 +42,22 @@ export default function PaperDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [paperId]);
+
+  const isProcessing = useMemo(() => {
+    if (!paper) return false;
+    return ['uploading', 'queued', 'parsing', 'modeling'].includes(paper.status);
+  }, [paper]);
 
   useEffect(() => {
-    loadDetail();
-    const timer = window.setInterval(loadDetail, 5000);
+    void loadDetail();
+  }, [loadDetail]);
+
+  useEffect(() => {
+    if (!isProcessing) return;
+    const timer = window.setInterval(loadDetail, 3000);
     return () => window.clearInterval(timer);
-  }, [paperId]);
+  }, [isProcessing, loadDetail]);
 
   const questions = useMemo(
     () => (draft?.document.questions ?? []) as Question[],
@@ -147,6 +156,30 @@ export default function PaperDetailPage() {
           }`}
         >
           {error || message}
+        </div>
+      )}
+
+      {isProcessing && (
+        <div className="rounded-[var(--radius-md)] border border-blue-200/80 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
+          <div className="flex items-center justify-between text-xs font-semibold text-[var(--color-primary)]">
+            <span className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
+              </span>
+              AI 试卷结构化解析中... ({paper.status})
+            </span>
+            <span>{paper.progress ?? 15}%</span>
+          </div>
+          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-blue-100 dark:bg-blue-900/50">
+            <div
+              className="h-full bg-[var(--color-primary)] transition-all duration-500 ease-out"
+              style={{ width: `${Math.max(5, Math.min(100, paper.progress ?? 15))}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
+            后台 Celery 流水线正在进行视觉/文本 OCR 提取、模型结构化建模与网页净化生成，完成时自动进入待审核状态。
+          </p>
         </div>
       )}
 

@@ -5,17 +5,17 @@
 """
 import asyncio
 import json
-import logging
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
+import structlog
 
 from ..security import validate_url_safety
 
-logger = logging.getLogger("tpaper.adapters")
+logger = structlog.get_logger(__name__)
 
 
 class RateLimiter:
@@ -129,6 +129,14 @@ class OpenAICompatibleAdapter:
                                     "data": data,
                                 },
                             })
+                        elif url.startswith("http://") or url.startswith("https://"):
+                            anthropic_content.append({
+                                "type": "image",
+                                "source": {
+                                    "type": "url",
+                                    "url": url,
+                                },
+                            })
                 converted.append({
                     "role": "assistant" if role == "assistant" else "user",
                     "content": anthropic_content or [{"type": "text", "text": "ping"}],
@@ -235,19 +243,54 @@ class OpenAICompatibleAdapter:
                 await _global_rate_limiter.acquire()
                 result = await coro_factory()
                 if result.success:
+                    logger.info(
+                        "model_call",
+                        model=result.model,
+                        success=True,
+                        latency_ms=result.latency_ms,
+                        prompt_tokens=result.usage.get("prompt_tokens", 0),
+                        completion_tokens=result.usage.get("completion_tokens", 0),
+                        total_tokens=result.usage.get("total_tokens", 0),
+                    )
                     return result
                 if self._is_retryable(result.error) and attempt < max_retries - 1:
                     wait = min(60 * (2 ** attempt), 300)
-                    logger.warning(f"API 调用失败 (attempt {attempt+1}/{max_retries})，{wait}s 后重试: {result.error}")
+                    logger.warning(
+                        "model_call_retry",
+                        model=result.model,
+                        attempt=attempt + 1,
+                        max_retries=max_retries,
+                        wait_s=wait,
+                        error=result.error[:200],
+                    )
                     await asyncio.sleep(wait)
                     continue
+                logger.warning(
+                    "model_call",
+                    model=result.model,
+                    success=False,
+                    latency_ms=result.latency_ms,
+                    error=result.error[:200],
+                )
                 return result
             except Exception as e:
                 if attempt < max_retries - 1:
                     wait = min(60 * (2 ** attempt), 300)
-                    logger.warning(f"API 调用异常 (attempt {attempt+1}/{max_retries})，{wait}s 后重试: {e}")
+                    logger.warning(
+                        "model_call_exception",
+                        model=self.model,
+                        attempt=attempt + 1,
+                        max_retries=max_retries,
+                        wait_s=wait,
+                        error=str(e)[:200],
+                    )
                     await asyncio.sleep(wait)
                     continue
+                logger.error(
+                    "model_call_failed",
+                    model=self.model,
+                    error=str(e)[:200],
+                )
                 return ModelCallResult(
                     content="", success=False, model=self.model,
                     error=f"{type(e).__name__}: {str(e) or repr(e)}",

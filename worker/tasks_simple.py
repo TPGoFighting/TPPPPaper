@@ -30,10 +30,20 @@ logger = logging.getLogger("tpaper.tasks_simple")
 def _run_async(coro):
     """在 Celery worker 中运行异步代码。"""
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
     finally:
+        try:
+            pending = asyncio.all_tasks(loop)
+            for t in pending:
+                t.cancel()
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        except Exception:
+            pass
         loop.close()
+        asyncio.set_event_loop(None)
 
 
 def _get_db():
@@ -97,16 +107,30 @@ def process_paper_simple(self, paper_id: int, source_file_id: int):
         if profile:
             text_adapter, vision_adapter = _get_adapters(profile)
 
-        # 创建任务记录
-        job = ProcessingJob(
-            paper_id=paper_id,
-            model_profile_id=profile.id if profile else None,
-            job_type="parse",
-            status="running",
-            stage="preprocessing",
-            idempotency_key=f"paper-{paper_id}-parse-simple",
+        # 幂等查找或新建任务记录
+        idem_key = f"paper-{paper_id}-parse-simple"
+        job = (
+            db.query(ProcessingJob)
+            .filter(ProcessingJob.idempotency_key == idem_key)
+            .first()
         )
-        db.add(job)
+        if not job:
+            job = ProcessingJob(
+                paper_id=paper_id,
+                model_profile_id=profile.id if profile else None,
+                job_type="parse",
+                status="running",
+                stage="preprocessing",
+                idempotency_key=idem_key,
+            )
+            db.add(job)
+        else:
+            job.status = "running"
+            job.stage = "preprocessing"
+            job.error_code = None
+            job.error_message = None
+            job.model_profile_id = profile.id if profile else None
+
         paper.status = "parsing"
         db.commit()
 
@@ -225,14 +249,22 @@ def process_paper_simple(self, paper_id: int, source_file_id: int):
 
     except Exception as e:
         logger.exception(f"[Paper {paper_id}] 处理失败")
+        try:
+            db.rollback()
+        except Exception:
+            pass
         paper = db.get(Paper, paper_id)
         if paper:
             paper.status = "failed"
-        if 'job' in locals():
+            paper.error_message = str(e)[:500]
+        if 'job' in locals() and job:
             job.status = "failed"
             job.error_code = type(e).__name__
             job.error_message = str(e)[:500]
+        try:
             db.commit()
+        except Exception:
+            pass
     finally:
         db.close()
 

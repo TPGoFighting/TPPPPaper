@@ -6,7 +6,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT))
 
 from worker.pipeline.answering import build_answer_prompt
-from worker.pipeline.simple_pipeline import build_simple_prompt
+from app.prompts.simple_v1 import build_prompt as build_simple_prompt
 
 
 def test_faithful_prompt_attaches_visual_page_with_page_marker():

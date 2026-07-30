@@ -2,7 +2,7 @@
 
 > **最后更新**: 2026-07-09
 > **在线体验**: https://tpaper.tpgofighting.top
-> **管理员账号**: admin / rkiOqvL2WR7Uwlw0
+> **管理员账号**: 见 `.env` 文件中的 `ADMIN_USERNAME` / `ADMIN_PASSWORD`
 
 ---
 

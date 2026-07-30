@@ -76,6 +76,9 @@ def req(method, path, body=None, headers=None, cookie=None, raw=False):
     url = path if path.startswith("http") else f"{API}{path}"
     data = None
     hdrs = dict(headers or {})
+    hdrs.setdefault("User-Agent",
+                     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
     if cookie:
         hdrs["Cookie"] = cookie
     if body is not None:
@@ -118,14 +121,22 @@ def multipart_upload(path, fields, file_bytes, filename, cookie, csrf=True):
 def main():
     # ---------- 1. 认证层 ----------
     status, payload, headers = req("POST", "/auth/login",
-                                    {"username": "admin", "password": "rkiOqvL2WR7Uwlw0"})
+                                    {"username": "admin", "password": "admin"})
     record("auth: login returns 200", status == 200,
            f"status={status}")
     set_cookie = None
     if headers:
-        sc = headers.get("Set-Cookie")
-        if sc:
-            set_cookie = sc.split(";")[0]
+        all_cookies = headers.get_all("Set-Cookie") if hasattr(headers, 'get_all') else []
+        if all_cookies:
+            # Combine all cookies: "name=value" from each, joined by "; "
+            parts = []
+            for c in all_cookies:
+                parts.append(c.split(";")[0])
+            set_cookie = "; ".join(parts)
+        else:
+            sc = headers.get("Set-Cookie")
+            if sc:
+                set_cookie = sc.split(";")[0]
     record("auth: session cookie issued", bool(set_cookie),
            set_cookie[:24] + "..." if set_cookie else "none")
 

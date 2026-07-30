@@ -82,7 +82,7 @@ class Paper(TimestampMixin, Base):
     )
 
     source_file: Mapped["SourceFile | None"] = relationship(
-        foreign_keys=[source_file_id], cascade="all, delete-orphan"
+        foreign_keys=[source_file_id], cascade="all, delete-orphan", single_parent=True
     )
     drafts: Mapped[list["PaperDraft"]] = relationship(
         back_populates="paper", foreign_keys="PaperDraft.paper_id", cascade="all, delete-orphan"

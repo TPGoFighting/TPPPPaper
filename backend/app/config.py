@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     upload_max_size_mb: int = 50
     upload_max_pages: int = 200
 
+    # ── 速率限制 ──
+    rate_limit_login_per_minute: int = 10
+    rate_limit_api_per_minute: int = 120
+
     # ── CORS（开发环境）──
     cors_origins: list[str] = [
         "http://localhost:3000",

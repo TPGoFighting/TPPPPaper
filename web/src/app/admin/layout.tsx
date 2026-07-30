@@ -24,7 +24,7 @@ export default function AdminLayout({
         router.replace('/login');
       }
     }
-    checkAuth();
+    void checkAuth();
   }, [router]);
 
   if (checking) {

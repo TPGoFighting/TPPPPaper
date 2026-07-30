@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from itsdangerous import URLSafeTimedSerializer
 
 from ..config import settings
-from ..deps import AdminUser, DBSession, require_auth
+from ..deps import AdminUser, CSRFProtected, DBSession, RateLimitLogin, require_auth, set_csrf_cookie
 from ..schemas import LoginIn
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -17,8 +17,8 @@ def _create_session_cookie(username: str) -> str:
 
 
 @router.post("/login")
-async def login(body: LoginIn, response: Response):
-    """管理员登录。"""
+async def login(body: LoginIn, response: Response, _rate_limit: RateLimitLogin = None):
+    """管理员登录（含速率限制）。"""
     # MVP：从环境变量配置的管理员账号校验
     expected_user = settings.admin_username
     if body.username != expected_user or not settings.admin_password_hash:
@@ -48,13 +48,16 @@ async def login(body: LoginIn, response: Response):
         samesite="lax",
         path="/",
     )
+    # 登录成功时下发 CSRF token
+    set_csrf_cookie(response)
     return {"username": body.username, "logged_in": True}
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(response: Response, _csrf: CSRFProtected = None):
     """登出，清除会话 Cookie。"""
     response.delete_cookie(settings.session_cookie_name, path="/")
+    response.delete_cookie("tpaper_csrf", path="/")
     return {"logged_out": True}
 
 

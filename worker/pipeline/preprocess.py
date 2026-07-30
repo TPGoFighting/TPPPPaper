@@ -46,11 +46,37 @@ def preprocess_pdf(content: bytes, include_page_images: bool = False) -> dict:
             extracted_pages.append(page_info)
         doc.close()
     except ImportError:
-        logger.warning("pymupdf 未安装，PDF 文本提取不可用")
-        extracted_pages = [{"page": 1, "text": "", "needs_multimodal": True}]
+        logger.warning("pymupdf 未安装，自动降级为 pypdf 提取 PDF 文本")
+        try:
+            import io
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(content))
+            for i, page in enumerate(reader.pages):
+                text = page.extract_text() or ""
+                extracted_pages.append({
+                    "page": i + 1,
+                    "text": text,
+                    "needs_multimodal": len(text.strip()) < 50,
+                })
+        except Exception as pypdf_err:
+            logger.error(f"pypdf 提取 PDF 文本失败: {pypdf_err}")
+            extracted_pages = [{"page": 1, "text": "", "needs_multimodal": True, "error": str(pypdf_err)}]
     except Exception as e:
         logger.error(f"PDF 解析失败: {e}")
-        extracted_pages = [{"page": 1, "text": "", "needs_multimodal": True, "error": str(e)}]
+        try:
+            import io
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(content))
+            extracted_pages = []
+            for i, page in enumerate(reader.pages):
+                text = page.extract_text() or ""
+                extracted_pages.append({
+                    "page": i + 1,
+                    "text": text,
+                    "needs_multimodal": len(text.strip()) < 50,
+                })
+        except Exception:
+            extracted_pages = [{"page": 1, "text": "", "needs_multimodal": True, "error": str(e)}]
 
     # 对需要 OCR 的页面，并行 Tesseract OCR 提取文字
     needs_ocr = [p for p in extracted_pages if p.get("needs_multimodal") and not p.get("text", "").strip()]
@@ -61,7 +87,6 @@ def preprocess_pdf(content: bytes, include_page_images: bool = False) -> dict:
             from PIL import Image
             import io as _io
 
-            doc = fitz.open(stream=content, filetype="pdf")
             mat = fitz.Matrix(2, 2)
 
             def _preprocess_image(img: "Image.Image") -> "Image.Image":
@@ -73,22 +98,26 @@ def preprocess_pdf(content: bytes, include_page_images: bool = False) -> dict:
 
             def _ocr_page(page_info: dict) -> dict:
                 page_idx = page_info["page"] - 1
-                if page_idx < 0 or page_idx >= len(doc):
+                thread_doc = fitz.open(stream=content, filetype="pdf")
+                try:
+                    if page_idx < 0 or page_idx >= len(thread_doc):
+                        return page_info
+                    page = thread_doc[page_idx]
+                    pix = page.get_pixmap(matrix=mat)
+                    img_bytes = pix.tobytes("png")
+                    img = Image.open(_io.BytesIO(img_bytes))
+                    ocr_img = _preprocess_image(img)
+                    ocr_text = pytesseract.image_to_string(
+                        ocr_img, lang="chi_sim+eng", config="--psm 6"
+                    )
+                    if ocr_text.strip():
+                        page_info["text"] = ocr_text.strip()
+                        page_info["needs_multimodal"] = False
+                    page_info["image_b64"] = base64.b64encode(img_bytes).decode()
+                    page_info["mime"] = "image/png"
                     return page_info
-                page = doc[page_idx]
-                pix = page.get_pixmap(matrix=mat)
-                img_bytes = pix.tobytes("png")
-                img = Image.open(_io.BytesIO(img_bytes))
-                ocr_img = _preprocess_image(img)
-                ocr_text = pytesseract.image_to_string(
-                    ocr_img, lang="chi_sim+eng", config="--psm 6"
-                )
-                if ocr_text.strip():
-                    page_info["text"] = ocr_text.strip()
-                    page_info["needs_multimodal"] = False
-                page_info["image_b64"] = base64.b64encode(img_bytes).decode()
-                page_info["mime"] = "image/png"
-                return page_info
+                finally:
+                    thread_doc.close()
 
             max_workers = min(8, len(needs_ocr))
             logger.info(f"并行 OCR: {len(needs_ocr)} pages, workers={max_workers}")
@@ -104,8 +133,6 @@ def preprocess_pdf(content: bytes, include_page_images: bool = False) -> dict:
                     except Exception as e:
                         p = futures[future]
                         logger.error(f"第 {p['page']} 页 OCR 失败: {e}")
-
-            doc.close()
         except ImportError as e:
             logger.warning(f"OCR 依赖未安装: {e}")
         except Exception as e:

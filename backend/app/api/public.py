@@ -3,6 +3,7 @@
 访客通过 /p/{slug} 访问已发布页面，无需登录。
 只读取已发布快照，不暴露草稿与源文件。
 """
+import html as html_module
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 
@@ -53,12 +54,13 @@ async def get_public_page(slug: str, db: DBSession):
         )
 
     # 严格 CSP（允许交互式试卷必要的脚本和样式）
+    safe_title = html_module.escape(paper.title)
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{paper.title}</title>
+<title>{safe_title}</title>
 <style>
 {pub.compiled_css}
 </style>

@@ -6,10 +6,11 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ── 枚举 ──
+
 
 class PaperMode(str, Enum):
     faithful_transcription = "faithful_transcription"
@@ -208,6 +209,8 @@ class PaperDocument(BaseModel):
 # ── API 响应 Schema ──
 
 class PaperOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     slug: str
@@ -223,11 +226,10 @@ class PaperOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class ModelProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     protocol: ModelProtocol
@@ -242,9 +244,6 @@ class ModelProfileOut(BaseModel):
     is_active: bool
     # API Key 掩码，前端只看到掩码
     api_key_masked: str = ""
-
-    class Config:
-        from_attributes = True
 
 
 class ModelProfileCreate(BaseModel):
@@ -276,6 +275,8 @@ class ModelProfileUpdate(BaseModel):
 
 
 class SourceFileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     original_filename: str
     mime_type: str
@@ -284,11 +285,10 @@ class SourceFileOut(BaseModel):
     expires_at: datetime
     deleted_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
-
 
 class JobOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     paper_id: int
     job_type: str
@@ -304,11 +304,10 @@ class JobOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class DraftOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     paper_id: int
     version: int
@@ -320,9 +319,6 @@ class DraftOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class DraftUpdate(BaseModel):
     document: dict[str, Any] | None = None
@@ -331,6 +327,8 @@ class DraftUpdate(BaseModel):
 
 
 class PublicationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     paper_id: int
     version: int
@@ -341,9 +339,6 @@ class PublicationOut(BaseModel):
     published_at: datetime
     published_by: str
     is_withdrawn: bool
-
-    class Config:
-        from_attributes = True
 
 
 class UploadInit(BaseModel):
@@ -364,8 +359,9 @@ class LoginIn(BaseModel):
 
 
 class TestConnectionIn(BaseModel):
-    base_url: str
-    api_key: str = Field(description="API 密钥")
+    profile_id: int | None = None
+    base_url: str = ""
+    api_key: str | None = Field(default=None, description="API 密钥，留空且指定 profile_id 时自动解密已保存的密钥")
     model: str = "gpt-4o"
     allow_private_network: bool = False
 

@@ -42,6 +42,7 @@ def detect_file_type(data: bytes) -> str:
 @router.post("/init")
 async def init_upload(
     _: AdminUser,
+    __: CSRFProtected,
     filename: str,
     mime_type: str,
     size_bytes: int,
@@ -82,15 +83,31 @@ async def upload_file(
     if len(content) > settings.upload_max_size_mb * 1024 * 1024:
         raise HTTPException(status_code=400, detail="文件超过上限")
 
-    # 文件签名校验
+    # 文件签名校验：以二进制 Magic Bytes 检测结果为最高权威标准
     detected = detect_file_type(content)
     if not detected:
         raise HTTPException(status_code=400, detail="文件签名不匹配，类型可能被伪造")
-    if detected != file.content_type:
-        raise HTTPException(
-            status_code=400,
-            detail=f"文件签名({detected})与声明类型({file.content_type})不符",
-        )
+
+    if file.content_type and file.content_type != "application/octet-stream":
+        allowed_aliases = {
+            "image/jpeg": {"image/jpeg", "image/jpg", "image/pjpeg"},
+            "image/png": {"image/png"},
+            "application/pdf": {"application/pdf"},
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/docx",
+                "application/x-docx",
+                "application/wps-office.docx",
+                "application/msword",
+                "application/zip",
+            },
+        }
+        valid_mimes = allowed_aliases.get(detected, {detected})
+        if file.content_type not in valid_mimes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"文件签名({detected})与声明类型({file.content_type})不符",
+            )
 
     sha = compute_sha256(content)
     storage_key = generate_storage_key(file.filename, content)
@@ -99,15 +116,10 @@ async def upload_file(
 
     # 创建 Paper 与 SourceFile
     from ..models import Paper as PaperModel
-    import slugify
+    from ..repositories import PaperRepository
 
-    base_slug = slugify.slugify(file.filename)[:60] or "paper"
-    slug = base_slug
-    # 确保 slug 唯一
-    suffix = 1
-    while db.query(PaperModel).filter(PaperModel.slug == slug).first():
-        slug = f"{base_slug}-{suffix}"
-        suffix += 1
+    repo = PaperRepository(db)
+    slug = repo.generate_unique_slug(file.filename)
 
     paper = PaperModel(
         title=file.filename.rsplit(".", 1)[0],

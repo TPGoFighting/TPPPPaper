@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
 import type { Paper } from '@/lib/api';
-import type { Metric, StatusOption, WorkflowStage } from './data';
-import { countStagePapers, formatDate } from './data';
+import { countStagePapers, formatDate, type Metric, type StatusOption, type WorkflowStage } from './data';
 
 interface AdminDashboardHeaderProps {
   totalCount: number;

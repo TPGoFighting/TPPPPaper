@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AdminDashboardHeader,
   MetricsGrid,
@@ -14,8 +14,8 @@ import {
   matchesStatusFilter,
   statusOptions,
   workflowStages,
+  type StatusOption,
 } from '@/features/admin-dashboard/data';
-import type { StatusOption } from '@/features/admin-dashboard/data';
 import { api, type Paper } from '@/lib/api';
 
 export default function AdminHomePage() {
@@ -25,35 +25,38 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadPapers() {
-      try {
+  const loadPapers = useCallback(async (isInitial = false) => {
+    try {
+      if (isInitial) {
         setLoading(true);
-        setError('');
-        const data = await api.get<Paper[]>('/papers');
-        if (!cancelled) {
-          setPapers(data);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : '资料列表加载失败');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      }
+      setError('');
+      const data = await api.get<Paper[]>('/papers');
+      setPapers(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '资料列表加载失败');
+    } finally {
+      if (isInitial) {
+        setLoading(false);
       }
     }
-
-    loadPapers();
-    const timer = window.setInterval(loadPapers, 5000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
   }, []);
+
+  const hasProcessingPapers = useMemo(() => {
+    return papers.some((p) => ['uploading', 'queued', 'parsing', 'modeling'].includes(p.status));
+  }, [papers]);
+
+  useEffect(() => {
+    void loadPapers(true);
+  }, [loadPapers]);
+
+  useEffect(() => {
+    if (!hasProcessingPapers) return;
+    const timer = window.setInterval(() => {
+      void loadPapers(false);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [hasProcessingPapers, loadPapers]);
 
   const filteredPapers = useMemo(() => {
     const query = search.trim().toLowerCase();
